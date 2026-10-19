@@ -27,6 +27,7 @@ it is enabled on startup when the setting `search_results_auto_refresh_interval`
 sorted alphabetically.
 - The width of the `Summary` column of the search results adapts to the width left by the other columns.
 - The names of the types of work items are truncated to 8 characters in the search results.
+- The `Boards` filter displays the type of every board: Scrum, Kanban or Simple.
 
 ## [1.18.0] 2026-10-15
 

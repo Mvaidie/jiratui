@@ -1842,3 +1842,32 @@ async def test_auto_refresh_ignores_filters_modified_after_the_last_search(
         assert search_work_items_mock.await_count == 2
         refresh_criteria = search_work_items_mock.await_args.kwargs['criteria']
         assert refresh_criteria.jql_expression == 'status = Done'
+
+
+@patch.object(ProjectSelectionInput, 'selection', PropertyMock(return_value='CP'))
+@patch.object(APIController, 'get_project_boards')
+@patch('jiratui.widgets.screen.MainScreen.fetch_statuses')
+@patch('jiratui.widgets.screen.MainScreen.fetch_issue_types')
+@patch('jiratui.widgets.screen.MainScreen.fetch_projects')
+@pytest.mark.asyncio
+async def test_fetch_boards_displays_the_type_of_the_boards(
+    fetch_projects_mock: AsyncMock,
+    fetch_issue_types_mock: AsyncMock,
+    fetch_statuses_mock: AsyncMock,
+    get_project_boards_mock: AsyncMock,
+    app,
+):
+    # GIVEN
+    get_project_boards_mock.return_value = APIControllerResponse(
+        result=[
+            AgileBoard(id=27, name='CP — Backlog', board_type=AgileBoardTypes.KANBAN),
+            AgileBoard(id=84, name='Team Core', board_type=AgileBoardTypes.SCRUM),
+        ]
+    )
+    async with app.run_test():
+        main_screen = cast('MainScreen', app.screen)  # type:ignore[name-defined] # noqa: F821
+        # WHEN
+        boards = await main_screen.fetch_boards()
+        # THEN
+        assert boards == [('CP — Backlog (Kanban)', 27), ('Team Core (Scrum)', 84)]
+        get_project_boards_mock.assert_awaited_once_with('CP')

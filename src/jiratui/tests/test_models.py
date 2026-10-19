@@ -1,6 +1,8 @@
 import pytest
 
 from jiratui.models import (
+    AgileBoard,
+    AgileBoardTypes,
     IssuePriority,
     IssueStatus,
     IssueType,
@@ -296,3 +298,18 @@ def test_jira_issue_show_work_item_type(issue_type, length, expected):
     )
     # THEN
     assert issue.show_work_item_type(length) == expected
+
+
+@pytest.mark.parametrize(
+    'board_type, expected',
+    [
+        (AgileBoardTypes.SCRUM, 'Team board (Scrum)'),
+        (AgileBoardTypes.KANBAN, 'Team board (Kanban)'),
+        (AgileBoardTypes.SIMPLE, 'Team board (Simple)'),
+    ],
+)
+def test_agile_board_display_name(board_type: AgileBoardTypes, expected: str):
+    # GIVEN
+    board = AgileBoard(id=1, name='Team board', board_type=board_type)
+    # THEN
+    assert board.display_name == expected
