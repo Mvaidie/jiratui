@@ -22,7 +22,11 @@ from jiratui.utils.search import (
     get_work_item_search_fields,
     get_work_item_search_results_table_columns,
 )
-from jiratui.utils.styling import get_style_for_work_item_status, get_style_for_work_item_type
+from jiratui.utils.styling import (
+    get_style_for_work_item_priority,
+    get_style_for_work_item_status,
+    get_style_for_work_item_type,
+)
 from jiratui.utils.ui_actions import Actionable, UIAction
 from jiratui.utils.urls import build_external_url_for_issue
 from jiratui.widgets.messages import SearchWorkItem
@@ -315,7 +319,10 @@ class IssuesSearchResultsTable(Actionable, DataTable, inherit_bindings=False):  
             if field_name == SearchFieldId.KEY.value:
                 cells[column_name] = item.key
             elif field_name == SearchFieldId.PRIORITY.value:
-                cells[column_name] = item.show_priority(10)
+                cells[column_name] = Text(
+                    item.show_priority(10),
+                    style=get_style_for_work_item_priority(item.priority_name),
+                )
             elif field_name == SearchFieldId.PARENT.value:
                 cells[column_name] = item.parent_key
             elif field_name == SearchFieldId.STATUS.value:

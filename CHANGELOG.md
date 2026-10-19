@@ -28,6 +28,12 @@ sorted alphabetically.
 - The width of the `Summary` column of the search results adapts to the width left by the other columns.
 - The names of the types of work items are truncated to 8 characters in the search results.
 - The `Boards` filter displays the type of every board: Scrum, Kanban or Simple.
+- The default colors of the types of work items are the colors of their icons in Jira: Bug, Documentation, QA,
+Spike, Story, Task and Technical Story.
+- The priorities of the work items are displayed with a gradient of colors from red, for the highest priority, to
+blue, for the lowest one, including in the column `Priority` of the search results. The rank of a priority comes from
+its code, e.g. `P1: Blocker`, or from the default priorities of Jira (`Highest` to `Lowest`). The colors can be
+customized with `styling.work_item_priority_colors`, whose keys can also be codes like `p1`.
 
 ## [1.18.0] 2026-10-15
 
