@@ -1,6 +1,7 @@
 import pytest
 
 from jiratui.models import (
+    IssuePriority,
     IssueStatus,
     IssueType,
     JiraIssue,
@@ -249,3 +250,49 @@ def test_work_items_search_order_by_choices_include_status():
     # THEN
     assert ('Status Asc', 'status asc') in choices
     assert ('Status Desc', 'status desc') in choices
+
+
+@pytest.mark.parametrize(
+    'priority, length, expected',
+    [
+        (None, 10, ''),
+        (IssuePriority(id='1', name='High'), 10, 'High'),
+        (IssuePriority(id='1', name='Medium priority level'), 10, 'Medium pri...'),
+        (IssuePriority(id='1', name='P2: Mandatory / Critical'), 10, 'P2'),
+        (IssuePriority(id='1', name='P2: Mandatory / Critical'), None, 'P2'),
+        (IssuePriority(id='1', name=': no code'), None, ': no code'),
+    ],
+)
+def test_jira_issue_show_priority(priority, length, expected):
+    # GIVEN
+    issue = JiraIssue(
+        id='1',
+        key='WI-1',
+        summary='Test',
+        status=IssueStatus(id='1', name='Done'),
+        priority=priority,
+    )
+    # THEN
+    assert issue.show_priority(length) == expected
+
+
+@pytest.mark.parametrize(
+    'issue_type, length, expected',
+    [
+        (None, 8, ''),
+        (IssueType(id='1', name='Bug'), 8, 'Bug'),
+        (IssueType(id='1', name='Technical Story'), 8, 'Technica...'),
+        (IssueType(id='1', name='Technical Story'), None, 'Technical Story'),
+    ],
+)
+def test_jira_issue_show_work_item_type(issue_type, length, expected):
+    # GIVEN
+    issue = JiraIssue(
+        id='1',
+        key='WI-1',
+        summary='Test',
+        status=IssueStatus(id='1', name='Done'),
+        issue_type=issue_type,
+    )
+    # THEN
+    assert issue.show_work_item_type(length) == expected

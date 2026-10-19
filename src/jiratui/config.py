@@ -217,9 +217,10 @@ class ApplicationConfiguration(BaseSettings):
     """The default order for search results. Accepts values from [WorkItemsSearchOrderBy](#jiratui.models.WorkItemsSearchOrderBy) enum: `CREATED_ASC`,
     `CREATED_DESC`, `PRIORITY_ASC`, `PRIORITY_DESC`, `KEY_ASC`, `KEY_DESC`, `STATUS_ASC`, `STATUS_DESC`."""
     search_results_columns: list[str] | None = None
-    """The columns you want to see in the search results.
-    The columns supported are: `status`, `issuetype`, `parent`, `assignee`, `reporter`, `summary`. If none is provided
-    then the default list of columns will be: `key`, `status`, `issuetype`, `parent', `summary`.
+    """The columns you want to see in the search results, in the order you want to see them.
+    The columns supported are: `priority`, `status`, `issuetype`, `parent`, `assignee`, `reporter`, `summary`. The
+    column `key` is always displayed first. If none is provided then the default list of columns will be: `key`,
+    `issuetype`, `priority`, `status`, `summary`, `assignee`.
     """
     git_repositories: dict | None = None
     """The Git repositories to create new branches based on work items. It expects a mapping from user-defined IDs into

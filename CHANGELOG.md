@@ -12,6 +12,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add the options `Status Asc` and `Status Desc` to sort the search results by status.
 - Add the `Boards` filter to search the work items of a board of the selected project. The filter is placed after the
 `Project` filter and it can be focused with the keys `b` (legacy) or `alt+b` (standard).
+- Add the column `priority` to the search results. The default columns of the search results are now, in this order:
+`Key`, `Type`, `Priority`, `Status`, `Summary` and `Assignee`. The column `Parent` is no longer displayed by default;
+it can still be enabled with the setting `search_results_columns`. When the name of a priority starts with a code
+followed by a colon, e.g. `P1: Blocker`, the search results only display the code, e.g. `P1`.
+
+### Minor Improvements
+
+- The columns of the search results follow the order defined in the setting `search_results_columns` instead of being
+sorted alphabetically.
+- The width of the `Summary` column of the search results adapts to the width left by the other columns.
+- The names of the types of work items are truncated to 8 characters in the search results.
 
 ## [1.18.0] 2026-10-15
 

@@ -2,6 +2,7 @@
 
 from typing import cast
 
+from rich.cells import cell_len
 from rich.text import Text
 from textual import on
 from textual.binding import Binding
@@ -182,7 +183,8 @@ class IssuesSearchResultsTable(Actionable, DataTable, inherit_bindings=False):  
         if isinstance(action.action, str)
     ] + [Binding('escape', 'hide', 'Hide search input', show=False)]
 
-    SMALLEST_MAXIMUM_WIDTH_FOR_SUMMARY_COLUMN = 30
+    SMALLEST_MAXIMUM_WIDTH_FOR_SUMMARY_COLUMN = 20
+    """The minimum width of the summary column. Otherwise, the summary column uses the width left by the other columns."""
 
     class WorkItemDeleted(Message):
         def __init__(self, work_item_key: str) -> None:
@@ -228,43 +230,79 @@ class IssuesSearchResultsTable(Actionable, DataTable, inherit_bindings=False):  
         # clear the existing data
         self.clear(columns=True)
 
-        maximum_summary_column_width = max(
-            self.SMALLEST_MAXIMUM_WIDTH_FOR_SUMMARY_COLUMN,
-            self.parent.container_size.width - 42,  # type:ignore[attr-defined]
-        )
-
         # update next search tokens
         if response.next_page_token:
             # there is a token to fetch the next page
             self.token_by_page[self.page + 1] = response.next_page_token
 
-        # set the columns
+        # set the columns in the same order as the fields
         columns: list[str] = get_work_item_search_results_table_columns(
             self.app.config.search_results_columns  # type:ignore[attr-defined]
         )
         self.add_column(label='#', key='index')
-        for column in sorted(columns):
+        for column in columns:
             self.add_column(label=column, key=column)
 
         work_item_search_fields: list[str] = get_work_item_search_fields(
             self.app.config.search_results_columns  # type:ignore[attr-defined]
         )
 
-        # build the rows
-        for index, issue in enumerate(response.issues):
-            cells = self._build_row_for_work_item(
-                issue, work_item_search_fields, maximum_summary_column_width
+        # build the rows; the summary is truncated afterward to fit in the width left by the other columns
+        rows: list[dict] = [
+            self._build_row_for_work_item(issue, work_item_search_fields)
+            for issue in response.issues
+        ]
+        summary_column = MAP_WORK_ITEM_SEARCH_FIELD_TO_SEARCH_RESULTS_COLUMNS[
+            SearchFieldId.SUMMARY.value
+        ]
+        if rows and summary_column in rows[0]:
+            maximum_summary_column_width = (
+                self.app.config.search_results_truncate_work_item_summary  # type:ignore[attr-defined]
+                or self._get_maximum_summary_column_width(rows, summary_column)
             )
-            self.add_row(*[index + 1, *cells], key=f'{issue.id}#{issue.key}')
+            for issue, cells in zip(response.issues, rows, strict=True):
+                cells[summary_column] = Text(issue.cleaned_summary(maximum_summary_column_width))
+        for index, (issue, cells) in enumerate(zip(response.issues, rows, strict=True)):
+            self.add_row(index + 1, *cells.values(), key=f'{issue.id}#{issue.key}')
 
-    def _build_row_for_work_item(
-        self, item: JiraIssue, work_item_search_fields: list[str], maximum_summary_column_width: int
-    ) -> list:
+    def _get_maximum_summary_column_width(self, rows: list[dict], summary_column: str) -> int:
+        """Calculates the width left by the other columns of the search results for the summary column.
+
+        Args:
+            rows: the cells of every row of the search results by column name.
+            summary_column: the name of the summary column.
+
+        Returns:
+            The maximum width of the summary column.
+        """
+
+        def cell_width(cell) -> int:
+            return cell.cell_len if isinstance(cell, Text) else cell_len(str(cell))
+
+        padding = 2 * self.cell_padding
+        # the width of a column is the width of its widest cell, including its label, plus the padding of the cells
+        used_width = max(len('#'), len(str(len(rows)))) + padding
+        for column in rows[0] if rows else {}:
+            if column != summary_column:
+                used_width += max(cell_width(column), *(cell_width(row[column]) for row in rows))
+                used_width += padding
+        # the padding of the summary column and the vertical scrollbar take space too
+        available_width = (
+            self.parent.container_size.width  # type:ignore[attr-defined]
+            - used_width
+            - padding
+            - 1
+        )
+        return max(self.SMALLEST_MAXIMUM_WIDTH_FOR_SUMMARY_COLUMN, available_width)
+
+    def _build_row_for_work_item(self, item: JiraIssue, work_item_search_fields: list[str]) -> dict:
         cells: dict = {}
         for field_name in work_item_search_fields:
             column_name = MAP_WORK_ITEM_SEARCH_FIELD_TO_SEARCH_RESULTS_COLUMNS.get(field_name)
             if field_name == SearchFieldId.KEY.value:
                 cells[column_name] = item.key
+            elif field_name == SearchFieldId.PRIORITY.value:
+                cells[column_name] = item.show_priority(10)
             elif field_name == SearchFieldId.PARENT.value:
                 cells[column_name] = item.parent_key
             elif field_name == SearchFieldId.STATUS.value:
@@ -276,19 +314,15 @@ class IssuesSearchResultsTable(Actionable, DataTable, inherit_bindings=False):  
                 style_work_type = ''
                 if self.app.config.search_results_style_work_item_type:  # type:ignore[attr-defined]
                     style_work_type = get_style_for_work_item_type(item.issue_type.name.lower())
-                cells[column_name] = Text(item.work_item_type_name, style=style_work_type)
+                cells[column_name] = Text(item.show_work_item_type(8), style=style_work_type)
             elif field_name == SearchFieldId.SUMMARY.value:
-                cells[column_name] = Text(
-                    item.cleaned_summary(
-                        self.app.config.search_results_truncate_work_item_summary  # type:ignore[attr-defined]
-                        or maximum_summary_column_width
-                    )
-                )
+                cells[column_name] = Text(item.cleaned_summary())
             elif field_name == SearchFieldId.ASSIGNEE.value:
                 cells[column_name] = item.show_assignee(10)
             elif field_name == SearchFieldId.REPORTER.value:
                 cells[column_name] = item.show_reporter(10)
-        return [value for key, value in sorted(cells.items())]
+        # the cells follow the order of the fields, i.e. the order of the columns
+        return cells
 
     def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
         """Fetches the details of the currently-selected item."""

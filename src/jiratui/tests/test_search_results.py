@@ -1,8 +1,10 @@
 from typing import cast
-from unittest.mock import AsyncMock, MagicMock, Mock, call, patch
+from unittest.mock import AsyncMock, MagicMock, Mock, PropertyMock, call, patch
 
 from pydantic import SecretStr
 import pytest
+from rich.text import Text
+from textual.geometry import Size
 
 from jiratui.api_controller.controller import APIController, APIControllerResponse
 from jiratui.app import JiraApp
@@ -136,15 +138,16 @@ async def test_search_results_table_with_user_defined_column(
             issues=jira_issues
         )
         # THEN
+        # the columns follow the order defined by the user
         assert [str(c.label) for c in main_screen.search_results_table.columns.values()] == [
             '#',
-            'Assignee',
             'Key',
-            'Parent',
+            'Assignee',
             'Reporter',
             'Status',
-            'Summary',
             'Type',
+            'Parent',
+            'Summary',
         ]
 
 
@@ -176,10 +179,11 @@ async def test_search_results_table_without_user_defined_column(
         assert [str(c.label) for c in main_screen.search_results_table.columns.values()] == [
             '#',
             'Key',
-            'Parent',
+            'Type',
+            'Priority',
             'Status',
             'Summary',
-            'Type',
+            'Assignee',
         ]
 
 
@@ -949,3 +953,37 @@ async def test_click_previous_page_on_first_page(
         assert main_screen.search_results_table.page == 1
         assert main_screen.search_results_table.current_work_item_key == jira_issues[0].key
         assert main_screen.search_results_container.border_subtitle == 'Page 1 of 1 (total: 2)'
+
+
+@pytest.mark.parametrize('container_width, expected_width', [(80, 59), (30, 20)])
+@patch('jiratui.widgets.screen.MainScreen.search_issues')
+@patch('jiratui.widgets.screen.MainScreen.fetch_statuses')
+@patch('jiratui.widgets.screen.MainScreen.fetch_issue_types')
+@patch('jiratui.widgets.screen.MainScreen.fetch_projects')
+@pytest.mark.asyncio
+async def test_search_results_table_summary_uses_the_width_left_by_other_columns(
+    search_projects_mock: AsyncMock,
+    fetch_issue_types_mock: AsyncMock,
+    fetch_statuses_mock: AsyncMock,
+    search_issues_mock: AsyncMock,
+    container_width: int,
+    expected_width: int,
+    app,
+):
+    # GIVEN
+    rows = [{'Key': 'key-1', 'Status': Text('Done'), 'Summary': Text('a summary')}]
+    async with app.run_test():
+        main_screen = cast('MainScreen', app.screen)  # type:ignore[name-defined] # noqa: F821
+        with patch.object(
+            SearchResultsContainer,
+            'container_size',
+            new_callable=PropertyMock,
+            return_value=Size(container_width, 20),
+        ):
+            # WHEN
+            width = main_screen.search_results_table._get_maximum_summary_column_width(
+                rows, 'Summary'
+            )
+        # THEN
+        # columns: '#' (1 + 2), 'Key' (5 + 2), 'Status' (6 + 2); summary padding (2) and the scrollbar (1)
+        assert width == expected_width
