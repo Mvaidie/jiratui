@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Add the options `Status Asc` and `Status Desc` to sort the search results by status.
+- Add the `Boards` filter to search the work items of a board of the selected project. The filter is placed after the
+`Project` filter and it can be focused with the keys `b` (legacy) or `alt+b` (standard).
 
 ## [1.18.0] 2026-10-15
 
