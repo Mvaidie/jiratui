@@ -2,7 +2,7 @@ from unittest.mock import AsyncMock, Mock, PropertyMock, patch
 
 import pytest
 from textual.containers import Vertical
-from textual.widgets import Rule, Static
+from textual.widgets import Rule, Static, TabPane
 
 from jiratui.api_controller.controller import APIController, APIControllerResponse
 from jiratui.app import JiraApp
@@ -1415,3 +1415,97 @@ async def test_open_display_text_content_screen_upon_receiving_view_content_mess
         await pilot.pause()
         # THEN
         assert isinstance(app.screen, DisplayTextContentScreen)
+
+
+@patch.object(APIController, 'get_field_ids')
+@patch.object(
+    WorkItemInfoContainer, '_update_additional_fields_ignore_ids', PropertyMock(return_value=[])
+)
+@patch.object(
+    WorkItemInfoContainer, '_enable_updating_additional_fields', PropertyMock(return_value=True)
+)
+@pytest.mark.asyncio
+async def test_work_item_info_container_displays_the_customers_after_the_description(
+    get_field_ids_mock: AsyncMock,
+    jira_issues_with_custom_fields,
+    app,
+):
+    # GIVEN
+    app.config.customer_field = 'Customer'
+    app.config.customer_ticket_id_field = 'Customer ticket ID'
+    app.config.customer_ticket_link_field = 'Customer ticket link'
+    get_field_ids_mock.return_value = APIControllerResponse(
+        result={
+            'Customer': 'customfield_10085',
+            'Customer ticket ID': 'customfield_10087',
+            'Customer ticket link': 'customfield_10069',
+        }
+    )
+    work_item = jira_issues_with_custom_fields[0]
+    work_item.edit_meta = {
+        'fields': {
+            'description': {'key': 'description', 'name': 'description', 'required': True},
+            'environment': {
+                'schema': {'custom': ''},
+                'key': 'environment',
+                'name': 'environment',
+                'required': True,
+            },
+        }
+    }
+    work_item.custom_fields = {
+        'customfield_10085': ['ATOS', 'CNAM'],
+        'customfield_10087': ['26663'],
+        'customfield_10069': 'https://example.com/tickets/26663',
+    }
+    async with app.run_test() as pilot:
+        widget = WorkItemInfoContainer()
+        await app.screen.mount(widget)
+        await app.workers.wait_for_complete()
+        # WHEN
+        widget.issue = work_item
+        await app.workers.wait_for_complete()
+        await pilot.pause()
+        # THEN
+        panes = list(widget.info_tabbed_content.query(TabPane))
+        assert [pane.id for pane in panes] == [
+            'pane-description',
+            'pane-customers',
+            'pane-environment',
+        ]
+        texts = [str(static.render()) for static in panes[1].query(Static)]
+        assert texts == [
+            'Customers',
+            'ATOS, CNAM',
+            'Customer ticket ID',
+            '26663',
+            'Customer ticket link',
+            'https://example.com/tickets/26663',
+        ]
+
+
+@patch.object(APIController, 'get_field_ids')
+@pytest.mark.asyncio
+async def test_work_item_info_container_without_customer_settings(
+    get_field_ids_mock: AsyncMock,
+    jira_issues_with_custom_fields,
+    app,
+):
+    # GIVEN
+    work_item = jira_issues_with_custom_fields[0]
+    work_item.edit_meta = {
+        'fields': {'description': {'key': 'description', 'name': 'description', 'required': True}}
+    }
+    async with app.run_test() as pilot:
+        widget = WorkItemInfoContainer()
+        await app.screen.mount(widget)
+        await app.workers.wait_for_complete()
+        # WHEN
+        widget.issue = work_item
+        await app.workers.wait_for_complete()
+        await pilot.pause()
+        # THEN
+        assert [pane.id for pane in widget.info_tabbed_content.query(TabPane)] == [
+            'pane-description'
+        ]
+        get_field_ids_mock.assert_not_called()

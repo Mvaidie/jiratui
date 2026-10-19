@@ -169,3 +169,18 @@ def test_parse_required_fields_from_meta_with_all_fields_not_required():
 )
 def test_build_jql_field_reference(field: str, expected: str):
     assert build_jql_field_reference(field) == expected
+
+
+@pytest.mark.parametrize(
+    'field_with_value, expected',
+    [
+        ('Customer', 'project = "P1" and "Customer" is not EMPTY'),
+        ('customfield_10085', 'project = "P1" and cf[10085] is not EMPTY'),
+        ('  ', 'project = "P1"'),
+    ],
+)
+def test_build_issue_search_jql_with_field_with_value(field_with_value: str, expected: str):
+    # WHEN
+    result = build_issue_search_jql(project_key='P1', field_with_value=field_with_value)
+    # THEN
+    assert result == expected

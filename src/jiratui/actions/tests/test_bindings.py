@@ -771,3 +771,15 @@ def test_standard_action_toggle_auto_refresh():
 
 def test_legacy_action_toggle_auto_refresh():
     assert KEY_BINDINGS_LEGACY.get(SupportedActions.TOGGLE_AUTO_REFRESH.value).get('keys') == ['r']
+
+
+def test_standard_action_focus_search_customer_filter():
+    assert KEY_BINDINGS_STANDARD.get(SupportedActions.FOCUS_SEARCH_CUSTOMER_FILTER.value).get(
+        'keys'
+    ) == ['alt+m']
+
+
+def test_legacy_action_focus_search_customer_filter():
+    assert KEY_BINDINGS_LEGACY.get(SupportedActions.FOCUS_SEARCH_CUSTOMER_FILTER.value).get(
+        'keys'
+    ) == ['m']

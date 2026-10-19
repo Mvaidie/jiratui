@@ -98,6 +98,8 @@ def app() -> JiraApp:
         search_results_columns=None,
         stale_work_items_statuses=None,
         customer_field=None,
+        customer_ticket_id_field=None,
+        customer_ticket_link_field=None,
         search_results_auto_refresh_interval=None,
         styling=None,
     )
@@ -2025,3 +2027,55 @@ async def test_find_work_items_with_customers_is_disabled_without_field(
         # THEN
         assert work_items == set()
         find_work_items_with_customers_mock.assert_not_called()
+
+
+@patch('jiratui.widgets.screen.MainScreen.fetch_statuses')
+@patch('jiratui.widgets.screen.MainScreen.fetch_issue_types')
+@patch('jiratui.widgets.screen.MainScreen.fetch_projects')
+@pytest.mark.asyncio
+async def test_customer_checkbox_is_disabled_without_customer_field(
+    fetch_projects_mock: AsyncMock,
+    fetch_issue_types_mock: AsyncMock,
+    fetch_statuses_mock: AsyncMock,
+    app,
+):
+    async with app.run_test():
+        main_screen = cast('MainScreen', app.screen)  # type:ignore[name-defined] # noqa: F821
+        # THEN
+        assert main_screen.customer_checkbox.disabled is True
+
+
+@patch.object(APIController, 'count_issues')
+@patch.object(APIController, 'search_issues')
+@patch('jiratui.widgets.screen.MainScreen.fetch_statuses')
+@patch('jiratui.widgets.screen.MainScreen.fetch_issue_types')
+@patch('jiratui.widgets.screen.MainScreen.fetch_projects')
+@pytest.mark.asyncio
+async def test_search_work_items_with_customers(
+    fetch_projects_mock: AsyncMock,
+    fetch_issue_types_mock: AsyncMock,
+    fetch_statuses_mock: AsyncMock,
+    search_issues_mock: AsyncMock,
+    count_issues_mock: AsyncMock,
+    app,
+):
+    # GIVEN
+    app.config.customer_field = ' Customer '
+    app.config.enable_advanced_full_text_search = False
+    search_issues_mock.return_value = APIControllerResponse(
+        result=JiraIssueSearchResponse(issues=[])
+    )
+    count_issues_mock.return_value = APIControllerResponse(result=0)
+    async with app.run_test() as pilot:
+        main_screen = cast('MainScreen', app.screen)  # type:ignore[name-defined] # noqa: F821
+        assert main_screen.customer_checkbox.disabled is False
+        await pilot.press('m')
+        assert app.focused is main_screen.customer_checkbox
+        main_screen.customer_checkbox.value = True
+        # WHEN
+        criteria = main_screen._get_search_criteria()
+        await main_screen._search_work_items(criteria=criteria)
+        # THEN
+        assert criteria.with_customers is True
+        assert search_issues_mock.call_args.kwargs['customer_field'] == 'Customer'
+        assert count_issues_mock.call_args.kwargs['customer_field'] == 'Customer'

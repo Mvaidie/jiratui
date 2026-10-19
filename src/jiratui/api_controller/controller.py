@@ -137,6 +137,7 @@ class APIController:
         self._required_fields_cache: dict[str, list[str]] = {}
         self._teams_cache: dict[str, list[tuple[str, str]]] = {}
         self._board_filter_ids_cache: dict[int, str] = {}
+        self._field_ids_by_name_cache: dict[str, str] | None = None
 
     def _adf_support_enabled(self) -> bool:
         return self.config.cloud and self.config.jira_api_version == 3
@@ -1229,6 +1230,7 @@ class APIController:
         order_by: WorkItemsSearchOrderBy | None = None,
         fields: list[str] | None = None,
         board_id: int | None = None,
+        customer_field: str | None = None,
     ) -> APIControllerResponse:
         """Searches for issues matching specified JQL query and other criteria.
 
@@ -1249,6 +1251,8 @@ class APIController:
             fields: the fields to retrieve for every work item. It defaults to: `'id', 'key', 'status', 'summary',
             'issuetype'`
             board_id: search work items displayed in the board with this ID, i.e. that match the board's filter.
+            customer_field: search work items that have at least one customer, i.e. a value in this field (name or
+            ID).
 
         Returns:
             An instance of `APIControllerResponse` with the work items found or, en error if the search can not be
@@ -1283,6 +1287,7 @@ class APIController:
                 limit=limit,
                 order_by=order_by,
                 filter_id=board_filter_response.result,
+                field_with_value=customer_field,
             )
         except ServiceUnavailableException:
             return APIControllerResponse(
@@ -1329,6 +1334,7 @@ class APIController:
         order_by: WorkItemsSearchOrderBy | None = None,
         fields: list[str] | None = None,
         board_id: int | None = None,
+        customer_field: str | None = None,
     ) -> APIControllerResponse:
         """Searches for issues matching specified JQL query and other criteria.
 
@@ -1353,6 +1359,8 @@ class APIController:
             fields: the fields to retrieve for every work item. It defaults to: `'id', 'key', 'status', 'summary',
             'issuetype'`
             board_id: search work items displayed in the board with this ID, i.e. that match the board's filter.
+            customer_field: search work items that have at least one customer, i.e. a value in this field (name or
+            ID).
 
         Returns:
             An instance of `APIControllerResponse` with the work items found or, en error if the search can not be
@@ -1394,6 +1402,7 @@ class APIController:
                 limit=limit,
                 order_by=order_by,
                 filter_id=board_filter_response.result,
+                field_with_value=customer_field,
             )
         except ServiceUnavailableException as e:
             exception_details: dict = self._extract_exception_details(e)
@@ -1444,6 +1453,7 @@ class APIController:
         issue_type: int | None = None,
         jql_query: str | None = None,
         board_id: int | None = None,
+        customer_field: str | None = None,
     ) -> APIControllerResponse:
         """Estimates the number of work items yield by a search.
 
@@ -1456,6 +1466,8 @@ class APIController:
             issue_type: search work items of this type.
             jql_query: search work items using this (additional) JQL query.
             board_id: search work items displayed in the board with this ID, i.e. that match the board's filter.
+            customer_field: search work items that have at least one customer, i.e. a value in this field (name or
+            ID).
 
         Returns:
             An instance of `APIControllerResponse` with the count of work items or, en error if the estimation can not
@@ -1487,6 +1499,7 @@ class APIController:
                 issue_type=issue_type,
                 jql_query=criteria.get('jql'),
                 filter_id=board_filter_response.result,
+                field_with_value=customer_field,
             )
         except NotImplementedError:
             return APIControllerResponse(result=0)
@@ -3152,6 +3165,39 @@ class APIController:
                 comment=response.get('comment'),
             )
         )
+
+    async def get_field_ids(self, fields: list[str]) -> APIControllerResponse:
+        """Retrieves the IDs of fields identified by their name or by their ID.
+
+        The IDs of all the fields are cached after the first request.
+
+        Args:
+            fields: the names, e.g. `Customer`, or the IDs, e.g. `customfield_10085`, of the fields.
+
+        Returns:
+            An instance of `APIControllerResponse` with a dictionary that maps every field of `fields` to its ID or to
+            `None` if the field does not exist or, `success = False` with an `error` if the fields can not be
+            retrieved.
+        """
+
+        if self._field_ids_by_name_cache is None:
+            response = await self.get_fields()
+            if not response.success:
+                return response
+            ids_by_name: dict[str, str] = {}
+            for field in response.result or []:
+                # keep the first field when several fields have the same name
+                if field.name:
+                    ids_by_name.setdefault(field.name.strip().lower(), field.id)
+            self._field_ids_by_name_cache = ids_by_name
+        field_ids: dict[str, str | None] = {}
+        for field in fields:
+            cleaned = field.strip()
+            if re.fullmatch(r'customfield_\d+', cleaned):
+                field_ids[field] = cleaned
+            else:
+                field_ids[field] = self._field_ids_by_name_cache.get(cleaned.lower())
+        return APIControllerResponse(result=field_ids)
 
     async def get_fields(self, field_name: str | None = None) -> APIControllerResponse:
         """Retrieves system and custom issue fields.

@@ -61,6 +61,8 @@ def app() -> JiraApp:
         search_results_columns=None,
         stale_work_items_statuses=None,
         customer_field=None,
+        customer_ticket_id_field=None,
+        customer_ticket_link_field=None,
         search_results_auto_refresh_interval=None,
         styling=None,
     )

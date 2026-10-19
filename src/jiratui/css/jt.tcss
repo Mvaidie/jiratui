@@ -35,8 +35,8 @@
 }
 
 .bottom-search-bar {
-    grid-size: 7 1;
-    grid-columns: 15% 12% 12% 12% 13% 30% 6%;
+    grid-size: 8 1;
+    grid-columns: 14% 11% 11% 12% 11% 10% 25% 6%;
 }
 
 .cols-3 {
@@ -1539,4 +1539,11 @@ WebLinksCollapsible {
 
 WebLinksDataTable {
     background: transparent;
+}
+
+/* Customer tab */
+
+.work-item-customers-label {
+    text-style: bold;
+    margin-top: 1;
 }

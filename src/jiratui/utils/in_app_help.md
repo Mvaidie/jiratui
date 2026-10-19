@@ -37,6 +37,7 @@ context.
 | `alt+u`      | Focuses the created-until search input                 | Main Screen                                                             |
 | `alt+o`      | Focuses the sorting search input                       | Main Screen                                                             |
 | `alt+v`      | Focuses the active-sprint search input                 | Main Screen                                                             |
+| `alt+m`      | Focuses the customer search input                      | Main Screen                                                             |
 | `alt+j`      | Focuses the JQL search input                           | Main Screen                                                             |
 | `/`          | Search work items                                      | Main Screen                                                             |
 | `ctrl+r`     | Search work items                                      | Main Screen                                                             |
@@ -116,6 +117,7 @@ context.
 | `u`                     | Focuses the created-until search input                   |         |
 | `o`                     | Focuses the sorting search input                         |         |
 | `v`                     | Focuses the active-sprint search input                   |         |
+| `m`                     | Focuses the customer search input                        |         |
 | `j`                     | Focuses the JQL search input                             |         |
 | `^r`                    | Search work items                                        |         |
 | `r`                     | Toggles the auto-refresh of the search results           |         |
@@ -237,6 +239,11 @@ If no `Created From` and `Created Until` search criteria are defined then the to
 within the last 15 days. The number of days can be specified by the configuration variable
 `search_issues_default_day_interval`.
 
+### Search by Customer
+
+Search work items that have at least one customer, i.e. a value in the field of the setting `customer_field`
+(`Customer` by default). The checkbox is disabled when the setting is not set.
+
 ### Search by Active Sprint
 
 When this checkbox is checked the application will filter work items that correspond to the currently active
@@ -326,6 +333,12 @@ when its status did not change during the last days.
 The search results display a blue dot (`●`) after the type of the work items that have at least one customer, i.e.
 a value in the field of the setting `customer_field`. The field is identified by its name (the default is `Customer`)
 or by its ID, e.g. `customfield_10085`; set the setting to an empty value to disable this feature.
+
+The **Info** tab of the selected work item has a **Customer** tab, right after the description, that displays its
+customers (the field of the setting `customer_field`), the ID of the ticket of the customer (the field of the setting
+`customer_ticket_id_field`, `Customer ticket ID` by default) and the link to the ticket of the customer (the field of
+the setting `customer_ticket_link_field`, `Customer ticket link` by default). The fields are identified by their name
+or by their ID, e.g. `customfield_10069`. This tab is not displayed when none of these settings is set.
 
 # Auto-refresh of the Search Results
 

@@ -44,6 +44,7 @@ from jiratui.widgets.create_work_item.screen import AddWorkItemScreen
 from jiratui.widgets.filters import (
     ActiveSprintCheckbox,
     BoardSelectionInput,
+    CustomerCheckbox,
     IssueSearchCreatedFromWidget,
     IssueSearchCreatedUntilWidget,
     IssueStatusSelectionInput,
@@ -91,6 +92,7 @@ class WorkItemSearchCriteria:
     order_by: WorkItemsSearchOrderBy | None = None
     jql_expression: str | None = None
     search_in_active_sprint: bool = False
+    with_customers: bool = False
 
 
 @dataclass
@@ -143,6 +145,7 @@ class MainScreen(Actionable, Screen):
         SupportedActions.FOCUS_SEARCH_CREATED_UNTIL_FILTER,
         SupportedActions.FOCUS_SEARCH_SORT_FILTER,
         SupportedActions.FOCUS_SEARCH_SPRINT_FILTER,
+        SupportedActions.FOCUS_SEARCH_CUSTOMER_FILTER,
         SupportedActions.FOCUS_SEARCH_JQL,
         SupportedActions.FOCUS_SEARCH_RESULTS,
         SupportedActions.FOCUS_WORK_ITEM_INFORMATION_TAB,
@@ -311,6 +314,10 @@ class MainScreen(Actionable, Screen):
         return self.query_one(IssueAttachmentsWidget)
 
     @property
+    def customer_checkbox(self) -> CustomerCheckbox:
+        return self.query_one(CustomerCheckbox)
+
+    @property
     def issue_key_input(self) -> WorkItemInputWidget:
         return self.query_one('#input_issue_key', expect_type=WorkItemInputWidget)
 
@@ -435,6 +442,14 @@ class MainScreen(Actionable, Screen):
                     value=self.config.active_sprint_on_startup,
                     border_subtitle=(
                         f'{self.current_key_bindings.get(SupportedActions.FOCUS_SEARCH_SPRINT_FILTER.value, {}).get("keys", [])[0]}'
+                        if self.config.show_keybinding_hints
+                        else None
+                    ),
+                )
+                yield CustomerCheckbox(
+                    disabled=not (self.config.customer_field or '').strip(),
+                    border_subtitle=(
+                        f'{self.current_key_bindings.get(SupportedActions.FOCUS_SEARCH_CUSTOMER_FILTER.value, {}).get("keys", [])[0]}'
                         if self.config.show_keybinding_hints
                         else None
                     ),
@@ -839,6 +854,7 @@ class MainScreen(Actionable, Screen):
             assignee=self.users_selector.account_id,
             jql_expression=self.jql_expression_input.value,
             search_in_active_sprint=self.active_sprint_checkbox.value,
+            with_customers=self.customer_checkbox.value,
         )
         if (value := self.issue_key_input.value) and isinstance(value, str) and value.strip():
             criteria.work_item_key = value.strip()
@@ -892,6 +908,9 @@ class MainScreen(Actionable, Screen):
         project_key = criteria.project_key
         board_id = criteria.board_id
         order_by = criteria.order_by
+        customer_field: str | None = (
+            (self.config.customer_field or '').strip() or None if criteria.with_customers else None
+        )
 
         # build the JQL query to search items based on a user-provided JQL query expression or a search term.
         jql_query: str | None = self._build_jql_query(
@@ -919,6 +938,7 @@ class MainScreen(Actionable, Screen):
                     self.app.config.search_results_columns  # type:ignore[attr-defined]
                 ),
                 board_id=board_id,
+                customer_field=customer_field,
             )
         else:
             response = await self.api.search_issues_by_page_number(
@@ -937,6 +957,7 @@ class MainScreen(Actionable, Screen):
                     self.app.config.search_results_columns  # type:ignore[attr-defined]
                 ),
                 board_id=board_id,
+                customer_field=customer_field,
             )
 
         if not response.success or response.result is None:
@@ -963,6 +984,7 @@ class MainScreen(Actionable, Screen):
                 issue_type=search_field_issue_type,
                 jql_query=jql_query,
                 board_id=board_id,
+                customer_field=customer_field,
             )
             if counting.success:
                 estimated_total_issues = counting.result
@@ -1318,6 +1340,9 @@ class MainScreen(Actionable, Screen):
 
     async def action_focus_work_item_subtasks_tab(self) -> None:
         self.set_focus(self.issue_child_work_items_widget)
+
+    async def action_focus_search_customer_filter(self) -> None:
+        self.set_focus(self.customer_checkbox)
 
     def action_copy_issue_url(self) -> None:
         """Copy to the clipboard the URL of the item currently selected in the search results."""

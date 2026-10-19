@@ -39,6 +39,7 @@ class SupportedActions(Enum):
     FLAG_WORK_ITEM = 'flag_work_item'
     FOCUS_PROJECT_FILTER = 'focus_project_filter'
     FOCUS_SEARCH_ASSIGNEE_FILTER = 'focus_search_assignee_filter'
+    FOCUS_SEARCH_CUSTOMER_FILTER = 'focus_search_customer_filter'
     FOCUS_SEARCH_BOARD_FILTER = 'focus_search_board_filter'
     FOCUS_SEARCH_CREATED_FROM_FILTER = 'focus_search_created_from_filter'
     FOCUS_SEARCH_CREATED_UNTIL_FILTER = 'focus_search_created_until_filter'
@@ -167,6 +168,12 @@ KEY_BINDINGS_LEGACY = {
         'show': False,
         'description': 'Focuses the active-sprint search input',
         'tooltip': 'Focuses the active-sprint search input',
+    },
+    SupportedActions.FOCUS_SEARCH_CUSTOMER_FILTER.value: {
+        'keys': ['m'],
+        'show': False,
+        'description': 'Focuses the customer search input',
+        'tooltip': 'Focuses the customer search input',
     },
     SupportedActions.FOCUS_SEARCH_JQL.value: {
         'keys': ['j'],
@@ -638,6 +645,12 @@ KEY_BINDINGS_STANDARD = {
         'show': False,
         'description': 'Focuses the active-sprint search input',
         'tooltip': 'Focuses the active-sprint search input',
+    },
+    SupportedActions.FOCUS_SEARCH_CUSTOMER_FILTER.value: {
+        'keys': ['alt+m'],
+        'show': False,
+        'description': 'Focuses the customer search input',
+        'tooltip': 'Focuses the customer search input',
     },
     SupportedActions.FOCUS_SEARCH_JQL.value: {
         'keys': ['alt+j'],

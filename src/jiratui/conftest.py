@@ -58,6 +58,8 @@ def config_for_testing() -> ApplicationConfiguration:
         search_results_columns=None,
         stale_work_items_statuses=None,
         customer_field=None,
+        customer_ticket_id_field=None,
+        customer_ticket_link_field=None,
         search_results_auto_refresh_interval=None,
         styling=None,
     )
@@ -96,6 +98,8 @@ def config_for_testing_jira_dc() -> ApplicationConfiguration:
         search_results_columns=None,
         stale_work_items_statuses=None,
         customer_field=None,
+        customer_ticket_id_field=None,
+        customer_ticket_link_field=None,
         search_results_auto_refresh_interval=None,
         styling=None,
     )
@@ -135,6 +139,8 @@ def jira_api_controller() -> APIController:
         search_results_columns=None,
         stale_work_items_statuses=None,
         customer_field=None,
+        customer_ticket_id_field=None,
+        customer_ticket_link_field=None,
         search_results_auto_refresh_interval=None,
         styling=None,
     )
@@ -174,6 +180,8 @@ def jira_api_controller_for_jira_dc() -> APIController:
         search_results_columns=None,
         stale_work_items_statuses=None,
         customer_field=None,
+        customer_ticket_id_field=None,
+        customer_ticket_link_field=None,
         search_results_auto_refresh_interval=None,
         styling=None,
     )
@@ -220,6 +228,8 @@ def app():
         search_results_columns=None,
         stale_work_items_statuses=None,
         customer_field=None,
+        customer_ticket_id_field=None,
+        customer_ticket_link_field=None,
         search_results_auto_refresh_interval=None,
         show_favourite_filters_in_jql_editor=False,
     )

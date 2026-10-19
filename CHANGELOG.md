@@ -25,6 +25,11 @@ setting `stale_work_items_statuses` (`In Development`, `In Review`, `In Test`, `
 more than `stale_work_items_days` days (7 by default).
 - The search results display a blue dot after the type of the work items that have at least one customer, i.e. a value
 in the field of the setting `customer_field` (`Customer` by default).
+- Add the `Customer` filter: a checkbox to search the work items that have at least one customer. It can be focused
+with the keys `m` (legacy) or `alt+m` (standard).
+- Add a `Customer` tab to the `Info` tab of the work items, right after the description. It displays the customers,
+the ID of the ticket of the customer and the link to the ticket of the customer; the fields are defined by the settings
+`customer_field`, `customer_ticket_id_field` and `customer_ticket_link_field`.
 
 ### Minor Improvements
 

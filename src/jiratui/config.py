@@ -227,6 +227,12 @@ class ApplicationConfiguration(BaseSettings):
     for more than `stale_work_items_days` days. Set it to an empty list to disable this feature."""
     stale_work_items_days: int = 7
     """The number of days after which a work item in one of the statuses of `stale_work_items_statuses` is stale."""
+    customer_ticket_id_field: str | None = 'Customer ticket ID'
+    """The field with the ID of the ticket of the customer, displayed in the Customer tab of the Info tab of the work
+    items. The field is identified by its name or by its ID, e.g. `customfield_10087`."""
+    customer_ticket_link_field: str | None = 'Customer ticket link'
+    """The field with the link to the ticket of the customer, displayed in the Customer tab of the Info tab of the
+    work items. The field is identified by its name or by its ID, e.g. `customfield_10069`."""
     customer_field: str | None = 'Customer'
     """The search results display a blue dot after the type of the work items that have at least one customer, i.e. a
     value in this field. The field is identified by its name, e.g. `Customer`, or by its ID, e.g. `customfield_10085`.

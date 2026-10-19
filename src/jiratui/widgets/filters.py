@@ -256,6 +256,31 @@ class ActiveSprintCheckbox(Checkbox):
         return '#search-by-active-sprint'
 
 
+class CustomerCheckbox(Checkbox):
+    """A checkbox to search work items that have at least one customer.
+
+    The checkbox is disabled when the setting `customer_field` is not set.
+    """
+
+    HELP = 'See Search by Customer section in the help'
+
+    def __init__(
+        self, value: bool = False, disabled: bool = False, border_subtitle: str | None = None
+    ):
+        super().__init__(
+            id='customer-checkbox',
+            label='Customer',
+            value=value,
+            disabled=disabled,
+            classes='input-checkbox',
+        )
+        self.border_subtitle = border_subtitle
+
+    @property
+    def help_anchor(self) -> str:
+        return '#search-by-customer'
+
+
 class JQLSearchWidget(Actionable, Input):
     """An input widget that holds a JQL expression.
 
