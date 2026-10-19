@@ -50,6 +50,7 @@ search_results_page_filtering_minimum_term_length: 3
 full_text_search_minimum_term_length: 3
 enable_advanced_full_text_search: true
 search_results_default_order: 'created desc'
+search_results_auto_refresh_interval: null
 git_repositories:
   1:
     name: 'My Cool Project'

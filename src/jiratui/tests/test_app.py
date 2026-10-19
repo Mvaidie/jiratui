@@ -45,6 +45,7 @@ def app_with_unrecognized_config_theme() -> JiraApp:
         enable_recent_history=False,
         enable_goto=False,
         search_results_columns=None,
+        search_results_auto_refresh_interval=None,
     )
     app = JiraApp(config_mock)
     app.api = APIController(config_mock)
@@ -83,6 +84,7 @@ def app_with_input_and_config_theme() -> JiraApp:
         enable_recent_history=False,
         enable_goto=False,
         search_results_columns=None,
+        search_results_auto_refresh_interval=None,
     )
     app = JiraApp(config_mock, user_theme='monokai')
     app.api = APIController(config_mock)
@@ -121,6 +123,7 @@ def app_with_input_theme() -> JiraApp:
         enable_recent_history=False,
         enable_goto=False,
         search_results_columns=None,
+        search_results_auto_refresh_interval=None,
     )
     app = JiraApp(config_mock, user_theme='monokai')
     app.api = APIController(config_mock)
@@ -159,6 +162,7 @@ def app_without_config_theme() -> JiraApp:
         enable_recent_history=False,
         enable_goto=False,
         search_results_columns=None,
+        search_results_auto_refresh_interval=None,
     )
     app = JiraApp(config_mock)
     app.api = APIController(config_mock)
@@ -197,6 +201,7 @@ def app() -> JiraApp:
         enable_recent_history=False,
         enable_goto=False,
         search_results_columns=None,
+        search_results_auto_refresh_interval=None,
     )
     app = JiraApp(config_mock)
     app.api = APIController(config_mock)
@@ -587,6 +592,7 @@ def config_dict() -> dict:
         'full_text_search_minimum_term_length': 3,
         'search_on_startup': False,
         'show_keybinding_hints': False,
+        'search_results_auto_refresh_interval': None,
     }
 
 

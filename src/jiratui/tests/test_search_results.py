@@ -1,5 +1,5 @@
 from typing import cast
-from unittest.mock import AsyncMock, MagicMock, Mock, PropertyMock, call, patch
+from unittest.mock import ANY, AsyncMock, MagicMock, Mock, PropertyMock, call, patch
 
 from pydantic import SecretStr
 import pytest
@@ -51,6 +51,7 @@ def app() -> JiraApp:
         enable_recent_history=False,
         enable_goto=False,
         search_results_columns=None,
+        search_results_auto_refresh_interval=None,
     )
     app = JiraApp(config_mock)
     app.api = APIController(config_mock)
@@ -806,8 +807,8 @@ async def test_click_next_page_search_results(
         # THEN
         search_work_items_mock.assert_has_calls(
             [
-                call(next_page_token=None, search_term=None, page=1),
-                call(next_page_token='token_a', search_term=None, page=2),
+                call(next_page_token=None, search_term=None, page=1, criteria=ANY),
+                call(next_page_token='token_a', search_term=None, page=2, criteria=ANY),
             ]
         )
         assert main_screen.search_results_table.page == 2
@@ -851,7 +852,7 @@ async def test_click_next_page_search_results_with_missing_token(
         assert main_screen.search_results_container.border_subtitle == 'Page 1 of 1 (total: 2)'
         search_work_items_mock.assert_has_calls(
             [
-                call(next_page_token=None, search_term=None, page=1),
+                call(next_page_token=None, search_term=None, page=1, criteria=ANY),
             ]
         )
         assert main_screen.search_results_table.page == 1
@@ -903,9 +904,9 @@ async def test_click_previous_page_search_results(
         # THEN
         search_work_items_mock.assert_has_calls(
             [
-                call(next_page_token=None, search_term=None, page=1),
-                call(next_page_token='token_a', search_term=None, page=2),
-                call(next_page_token=None, search_term=None, page=1),
+                call(next_page_token=None, search_term=None, page=1, criteria=ANY),
+                call(next_page_token='token_a', search_term=None, page=2, criteria=ANY),
+                call(next_page_token=None, search_term=None, page=1, criteria=ANY),
             ]
         )
         assert main_screen.search_results_table.page == 1
@@ -947,7 +948,7 @@ async def test_click_previous_page_on_first_page(
         # THEN
         search_work_items_mock.assert_has_calls(
             [
-                call(next_page_token=None, search_term=None, page=1),
+                call(next_page_token=None, search_term=None, page=1, criteria=ANY),
             ]
         )
         assert main_screen.search_results_table.page == 1

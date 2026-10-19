@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime
 import logging
 
 from dateutil.parser import isoparse  # type:ignore[import-untyped]
@@ -8,6 +8,7 @@ from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, HorizontalGroup, ItemGrid, Vertical
 from textual.screen import Screen
+from textual.timer import Timer
 from textual.widgets import Button, Footer, Header, LoadingIndicator, Select, TabPane
 from textual.worker import Worker
 
@@ -15,7 +16,12 @@ from jiratui.actions.constants import SupportedActions
 from jiratui.actions.keys import get_application_key_bindings
 from jiratui.api_controller.controller import APIController, APIControllerResponse
 from jiratui.config import CONFIGURATION
-from jiratui.constants import FULL_TEXT_SEARCH_DEFAULT_MINIMUM_TERM_LENGTH, LOGGER_NAME
+from jiratui.constants import (
+    FULL_TEXT_SEARCH_DEFAULT_MINIMUM_TERM_LENGTH,
+    LOGGER_NAME,
+    SEARCH_RESULTS_AUTO_REFRESH_DEFAULT_INTERVAL,
+    SEARCH_RESULTS_AUTO_REFRESH_MINIMUM_INTERVAL,
+)
 from jiratui.models import (
     IssueType,
     JiraBaseIssue,
@@ -70,6 +76,23 @@ from jiratui.widgets.work_item_subtasks.subtasks import (
 
 
 @dataclass
+class WorkItemSearchCriteria:
+    """The criteria of a search of work items, i.e. the values of the search filters when the search starts."""
+
+    work_item_key: str | None = None
+    project_key: str | None = None
+    board_id: int | None = None
+    status: int | None = None
+    issue_type: int | None = None
+    assignee: str | None = None
+    created_from: date | None = None
+    created_until: date | None = None
+    order_by: WorkItemsSearchOrderBy | None = None
+    jql_expression: str | None = None
+    search_in_active_sprint: bool = False
+
+
+@dataclass
 class WorkItemSearchResult:
     total: int = 0
     start: int = 0
@@ -91,6 +114,7 @@ class MainScreen(Actionable, Screen):
     - searching Jira users for the assignee input filter
     - searching projects for the project input
     - searching the boards of the selected project for the board input filter
+    - refreshing the search results automatically
     - searching types of issues for the issue type input filter
     - composing the widgets in the UI
 
@@ -134,6 +158,7 @@ class MainScreen(Actionable, Screen):
         SupportedActions.CREATE_WORK_ITEM,
         SupportedActions.SHOW_RECENT_HISTORY,
         SupportedActions.CREATE_GIT_BRANCH,
+        SupportedActions.TOGGLE_AUTO_REFRESH,
     ]:
         data = key_bindings.get(supported_action_id.value, {})
         ACTIONS.append(
@@ -201,6 +226,20 @@ class MainScreen(Actionable, Screen):
             }
         self.__recent_history_manager = HistoryManager()
         self.logger = JiraTUILogger(logging.getLogger(LOGGER_NAME), self.config.enable_logging)
+        self._last_search: dict | None = None
+        """The arguments of the last search of work items. The auto-refresh repeats this search."""
+        self._last_search_time: datetime | None = None
+        self._auto_refresh_enabled: bool = bool(self.config.search_results_auto_refresh_interval)
+        self._auto_refresh_timer: Timer | None = None
+
+    @property
+    def auto_refresh_interval(self) -> int:
+        """The number of seconds between 2 refreshes of the search results."""
+        return max(
+            SEARCH_RESULTS_AUTO_REFRESH_MINIMUM_INTERVAL,
+            self.config.search_results_auto_refresh_interval
+            or SEARCH_RESULTS_AUTO_REFRESH_DEFAULT_INTERVAL,
+        )
 
     @property
     def project_selector(self) -> ProjectSelectionInput:
@@ -592,6 +631,14 @@ class MainScreen(Actionable, Screen):
             )
         )
 
+        # the timer that refreshes the search results; it is paused while the auto-refresh is disabled
+        self._auto_refresh_timer = self.set_interval(
+            self.auto_refresh_interval,
+            self._auto_refresh_search_results,
+            pause=not self._auto_refresh_enabled,
+        )
+        self._update_auto_refresh_legend()
+
     async def fetch_projects(self) -> None:
         """Fetches the list of available projects.
 
@@ -780,12 +827,43 @@ class MainScreen(Actionable, Screen):
         # not override the boards of the current one
         self.run_worker(self.fetch_boards(), group='fetch_boards', exclusive=True)
 
+    def _get_search_criteria(self) -> WorkItemSearchCriteria:
+        """Extracts the criteria of a search of work items from the search filters.
+
+        Returns:
+            An instance of `WorkItemSearchCriteria` with the values of the search filters.
+        """
+
+        criteria = WorkItemSearchCriteria(
+            assignee=self.users_selector.account_id,
+            jql_expression=self.jql_expression_input.value,
+            search_in_active_sprint=self.active_sprint_checkbox.value,
+        )
+        if (value := self.issue_key_input.value) and isinstance(value, str) and value.strip():
+            criteria.work_item_key = value.strip()
+        if value := self.issue_status_selector.selection:
+            criteria.status = int(value)
+        if value := self.issue_date_from_input.value:
+            criteria.created_from = isoparse(value).date()
+        if value := self.issue_date_until_input.value:
+            criteria.created_until = isoparse(value).date()
+        if value := self.issue_type_selector.selection:
+            criteria.issue_type = value
+        if value := self.project_selector.selection:
+            criteria.project_key = value
+        if value := self.board_selector.selection:
+            criteria.board_id = int(value)
+        if self.order_by_widget.selection:
+            criteria.order_by = WorkItemsSearchOrderBy(self.order_by_widget.selection)
+        return criteria
+
     async def _search_work_items(
         self,
         next_page_token: str | None = None,
         calculate_total: bool = True,
         search_term: str | None = None,
         page: int | None = None,
+        criteria: WorkItemSearchCriteria | None = None,
     ) -> WorkItemSearchResult:
         """Searches work items.
 
@@ -797,48 +875,27 @@ class MainScreen(Actionable, Screen):
             search_term: this is the search term used for ull-text search.
             page: if provided, then the results page with this number wil/ be retrieved. This is used for
             pagination of results in Jira Data Center Platform.
+            criteria: the criteria of the search; if not provided the criteria are extracted from the search filters.
 
         Returns:
             An instance of `WorkItemSearchResult` with the results of the search.
         """
 
         # extract filters for the search
-        search_field_status: int | None = None
-        if value := self.issue_status_selector.selection:
-            search_field_status = int(value)
-
-        search_field_created_from: date | None = None
-        if value := self.issue_date_from_input.value:
-            search_field_created_from = isoparse(value).date()
-
-        search_field_created_until: date | None = None
-        if value := self.issue_date_until_input.value:
-            search_field_created_until = isoparse(value).date()
-
-        search_field_assignee: str | None = self.users_selector.account_id
-
-        search_field_issue_type: int | None = None
-        if value := self.issue_type_selector.selection:
-            search_field_issue_type = value
-
-        project_key: str | None = None
-        if value := self.project_selector.selection:
-            project_key = value
-
-        board_id: int | None = None
-        if value := self.board_selector.selection:
-            board_id = int(value)
-
-        order_by = (
-            WorkItemsSearchOrderBy(self.order_by_widget.selection)
-            if self.order_by_widget.selection
-            else None
-        )
+        criteria = criteria or self._get_search_criteria()
+        search_field_status = criteria.status
+        search_field_created_from = criteria.created_from
+        search_field_created_until = criteria.created_until
+        search_field_assignee = criteria.assignee
+        search_field_issue_type = criteria.issue_type
+        project_key = criteria.project_key
+        board_id = criteria.board_id
+        order_by = criteria.order_by
 
         # build the JQL query to search items based on a user-provided JQL query expression or a search term.
         jql_query: str | None = self._build_jql_query(
             search_term=search_term,
-            jql_expression=self.jql_expression_input.value,
+            jql_expression=criteria.jql_expression,
             use_advance_search=self.config.enable_advanced_full_text_search,
         )
 
@@ -852,7 +909,7 @@ class MainScreen(Actionable, Screen):
                 status=search_field_status,
                 assignee=search_field_assignee,
                 issue_type=search_field_issue_type,
-                search_in_active_sprint=self.active_sprint_checkbox.value,
+                search_in_active_sprint=criteria.search_in_active_sprint,
                 jql_query=jql_query,
                 next_page_token=next_page_token,
                 limit=self.config.search_results_per_page,
@@ -870,7 +927,7 @@ class MainScreen(Actionable, Screen):
                 status=search_field_status,
                 assignee=search_field_assignee,
                 issue_type=search_field_issue_type,
-                search_in_active_sprint=self.active_sprint_checkbox.value,
+                search_in_active_sprint=criteria.search_in_active_sprint,
                 jql_query=jql_query,
                 page=page,
                 limit=self.config.search_results_per_page,
@@ -966,6 +1023,8 @@ class MainScreen(Actionable, Screen):
         next_page_token: str | None = None,
         search_term: str | None = None,
         page: int | None = None,
+        refresh: bool = False,
+        criteria: WorkItemSearchCriteria | None = None,
     ) -> None:
         """Searches work items.
 
@@ -979,33 +1038,108 @@ class MainScreen(Actionable, Screen):
             next_page_token: a token that identifies the next page of results.
             search_term: a search term to search items using full-text search.
             page: the page number to fetch results; this is only supported for Jira Data Center (aka. on-premises)
+            refresh: if `True` the search refreshes the search results: the search results table keeps the
+            highlighted work item and the focus does not move to the table.
+            criteria: the criteria of the search; if not provided the criteria are extracted from the search filters.
 
         Returns:
             Nothing.
         """
-        self.run_button.loading = True
+        criteria = criteria or self._get_search_criteria()
+        # the auto-refresh repeats this search with the same criteria, even if the user modifies the filters meanwhile
+        self._last_search = {
+            'next_page_token': next_page_token,
+            'search_term': search_term,
+            'page': page,
+            'criteria': criteria,
+        }
+        if not refresh:
+            self.run_button.loading = True
         results: WorkItemSearchResult
-        if (value := self.issue_key_input.value) and isinstance(value, str) and value.strip():
+        if criteria.work_item_key:
             # search single issue
-            results = await self._search_single_issue(value.strip())
+            results = await self._search_single_issue(criteria.work_item_key)
         else:
             results = await self._search_work_items(
-                next_page_token=next_page_token, search_term=search_term, page=page
+                next_page_token=next_page_token,
+                search_term=search_term,
+                page=page,
+                criteria=criteria,
             )
         # set the data in the results table
         table = self.search_results_table
+        highlighted_row_key: str | None = (
+            f'{table.current_work_item_id}#{table.current_work_item_key}'
+            if table.current_work_item_key
+            else None
+        )
         # store the initial results set in the table to handle local searches
         table.set_initial_results_set(results.response)
         # update the result set in the table
         table.search_results = results.response
-        table.focus()
+        if refresh:
+            table.move_cursor_to_work_item(highlighted_row_key)
+        else:
+            table.focus()
 
         # update results count for the table's container
         self.search_results_container.pagination = {
             'total': results.total,
             'current_page_number': self.search_results_table.page,
         }
-        self.run_button.loading = False
+        self._last_search_time = datetime.now()
+        self._update_auto_refresh_legend()
+        if not refresh:
+            self.run_button.loading = False
+
+    def action_toggle_auto_refresh(self) -> None:
+        """Enables/disables the auto-refresh of the search results."""
+
+        if self._auto_refresh_timer is None:
+            return
+        self._auto_refresh_enabled = not self._auto_refresh_enabled
+        if self._auto_refresh_enabled:
+            # start counting the interval from now
+            self._auto_refresh_timer.reset()
+            self._auto_refresh_timer.resume()
+            self.notify(
+                f'The search results will be refreshed every {self.auto_refresh_interval} seconds',
+                title='Auto-refresh enabled',
+            )
+        else:
+            self._auto_refresh_timer.pause()
+            self.notify('The search results will not be refreshed', title='Auto-refresh disabled')
+        self._update_auto_refresh_legend()
+
+    def _auto_refresh_search_results(self) -> None:
+        """Repeats the last search of work items to refresh the search results.
+
+        The refresh is skipped when no search was done yet, when another screen is displayed on top of the main
+        screen, when a search is running or when the user is filtering the search results.
+        """
+
+        if (
+            self._last_search is None
+            or self.app.screen is not self
+            or self.search_results_filter_input.display
+            or any(
+                worker.name == 'search_issues' and worker.is_running for worker in self.app.workers
+            )
+        ):
+            return
+        self.run_worker(
+            self.search_issues(**self._last_search, refresh=True),
+            group='auto-refresh',
+            exclusive=True,
+        )
+
+    def _update_auto_refresh_legend(self) -> None:
+        legend: str | None = None
+        if self._auto_refresh_enabled:
+            legend = f'auto-refresh: {self.auto_refresh_interval}s'
+            if self._last_search_time:
+                legend = f'{legend}, updated at {self._last_search_time.strftime("%H:%M:%S")}'
+        self.search_results_container.auto_refresh_legend = legend
 
     @on(Button.Pressed, '#run-button')
     async def handle_run_button(self) -> None:

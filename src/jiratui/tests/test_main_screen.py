@@ -41,7 +41,8 @@ from jiratui.widgets.related_work_items.related_issues import (
     RelatedIssuesWidget,
 )
 from jiratui.widgets.remote_links.links import IssueRemoteLinksWidget
-from jiratui.widgets.screen import MainScreen, WorkItemSearchResult
+from jiratui.widgets.screen import MainScreen, WorkItemSearchCriteria, WorkItemSearchResult
+from jiratui.widgets.screens.quit import QuitScreen
 from jiratui.widgets.screens.work_item_quick_view import WorkItemQuickViewScreen
 from jiratui.widgets.search import IssuesSearchResultsTable, SearchResultsContainer
 from jiratui.widgets.work_item_details.details import IssueDetailsWidget
@@ -95,6 +96,7 @@ def app() -> JiraApp:
         enable_recent_history=False,
         enable_goto=False,
         search_results_columns=None,
+        search_results_auto_refresh_interval=None,
     )
     app = JiraApp(config_mock)
     app.api = APIController(config_mock)
@@ -1641,3 +1643,202 @@ async def test_search_work_items_by_board(
         # THEN
         assert search_issues_mock.call_args.kwargs['board_id'] == 84
         assert count_issues_mock.call_args.kwargs['board_id'] == 84
+
+
+def _work_items_search_result(keys: list[str]) -> WorkItemSearchResult:
+    issues = [
+        JiraIssue(
+            id=key.split('-')[1],
+            key=key,
+            summary=f'summary of {key}',
+            status=IssueStatus(id='1', name='To Do'),
+            issue_type=IssueType(id='1', name='Task'),
+        )
+        for key in keys
+    ]
+    return WorkItemSearchResult(
+        total=len(issues),
+        start=1,
+        end=len(issues),
+        response=JiraIssueSearchResponse(issues=issues),
+    )
+
+
+@patch('jiratui.widgets.screen.MainScreen._search_work_items')
+@patch('jiratui.widgets.screen.MainScreen.fetch_statuses')
+@patch('jiratui.widgets.screen.MainScreen.fetch_issue_types')
+@patch('jiratui.widgets.screen.MainScreen.fetch_projects')
+@pytest.mark.asyncio
+async def test_refresh_search_results_keeps_highlighted_work_item_and_focus(
+    fetch_projects_mock: AsyncMock,
+    fetch_issue_types_mock: AsyncMock,
+    fetch_statuses_mock: AsyncMock,
+    search_work_items_mock: AsyncMock,
+    app,
+):
+    # GIVEN
+    app.config.search_results_truncate_work_item_summary = 0
+    app.config.search_results_style_work_item_status = False
+    app.config.search_results_style_work_item_type = False
+    search_work_items_mock.side_effect = [
+        _work_items_search_result(['WI-1', 'WI-2', 'WI-3']),
+        # a new work item is found when refreshing the results
+        _work_items_search_result(['WI-4', 'WI-1', 'WI-2', 'WI-3']),
+    ]
+    async with app.run_test() as pilot:
+        main_screen = cast('MainScreen', app.screen)  # type:ignore[name-defined] # noqa: F821
+        table = main_screen.search_results_table
+        await main_screen.search_issues()
+        await pilot.pause()
+        table.move_cursor(row=1)
+        await pilot.pause()
+        main_screen.jql_expression_input.focus()
+        await pilot.pause()
+        # WHEN
+        await main_screen.search_issues(refresh=True)
+        await pilot.pause()
+        # THEN
+        assert table.row_count == 4
+        assert table.cursor_row == 2
+        assert table.current_work_item_key == 'WI-2'
+        assert app.focused is main_screen.jql_expression_input
+
+
+@patch('jiratui.widgets.screen.MainScreen.fetch_statuses')
+@patch('jiratui.widgets.screen.MainScreen.fetch_issue_types')
+@patch('jiratui.widgets.screen.MainScreen.fetch_projects')
+@pytest.mark.asyncio
+async def test_toggle_auto_refresh(
+    fetch_projects_mock: AsyncMock,
+    fetch_issue_types_mock: AsyncMock,
+    fetch_statuses_mock: AsyncMock,
+    app,
+):
+    async with app.run_test() as pilot:
+        main_screen = cast('MainScreen', app.screen)  # type:ignore[name-defined] # noqa: F821
+        assert main_screen.search_results_container.auto_refresh_legend is None
+        # WHEN
+        await main_screen.run_action('toggle_auto_refresh')
+        await pilot.pause()
+        # THEN
+        assert main_screen.search_results_container.auto_refresh_legend == 'auto-refresh: 60s'
+        # WHEN
+        await main_screen.run_action('toggle_auto_refresh')
+        await pilot.pause()
+        # THEN
+        assert main_screen.search_results_container.auto_refresh_legend is None
+
+
+@pytest.mark.parametrize(
+    'interval, expected_legend', [(30, 'auto-refresh: 30s'), (5, 'auto-refresh: 10s')]
+)
+@patch('jiratui.widgets.screen.MainScreen.fetch_statuses')
+@patch('jiratui.widgets.screen.MainScreen.fetch_issue_types')
+@patch('jiratui.widgets.screen.MainScreen.fetch_projects')
+@pytest.mark.asyncio
+async def test_auto_refresh_enabled_on_startup_with_configured_interval(
+    fetch_projects_mock: AsyncMock,
+    fetch_issue_types_mock: AsyncMock,
+    fetch_statuses_mock: AsyncMock,
+    interval: int,
+    expected_legend: str,
+    app,
+):
+    # GIVEN
+    app.config.search_results_auto_refresh_interval = interval
+    async with app.run_test():
+        main_screen = cast('MainScreen', app.screen)  # type:ignore[name-defined] # noqa: F821
+        # THEN
+        assert main_screen.search_results_container.auto_refresh_legend == expected_legend
+
+
+@patch('jiratui.widgets.screen.MainScreen.search_issues')
+@patch('jiratui.widgets.screen.MainScreen.fetch_statuses')
+@patch('jiratui.widgets.screen.MainScreen.fetch_issue_types')
+@patch('jiratui.widgets.screen.MainScreen.fetch_projects')
+@pytest.mark.asyncio
+async def test_auto_refresh_repeats_the_last_search(
+    fetch_projects_mock: AsyncMock,
+    fetch_issue_types_mock: AsyncMock,
+    fetch_statuses_mock: AsyncMock,
+    search_issues_mock: AsyncMock,
+    app,
+):
+    async with app.run_test() as pilot:
+        main_screen = cast('MainScreen', app.screen)  # type:ignore[name-defined] # noqa: F821
+        # WHEN: no search was done yet
+        main_screen._auto_refresh_search_results()
+        await pilot.pause()
+        # THEN
+        search_issues_mock.assert_not_called()
+        # WHEN
+        criteria = WorkItemSearchCriteria(project_key='P1', jql_expression='status = Done')
+        main_screen._last_search = {
+            'next_page_token': 'token',
+            'search_term': 'abc',
+            'page': 2,
+            'criteria': criteria,
+        }
+        main_screen._auto_refresh_search_results()
+        await app.workers.wait_for_complete()
+        # THEN
+        search_issues_mock.assert_called_once_with(
+            next_page_token='token', search_term='abc', page=2, criteria=criteria, refresh=True
+        )
+
+
+@patch('jiratui.widgets.screen.MainScreen.search_issues')
+@patch('jiratui.widgets.screen.MainScreen.fetch_statuses')
+@patch('jiratui.widgets.screen.MainScreen.fetch_issue_types')
+@patch('jiratui.widgets.screen.MainScreen.fetch_projects')
+@pytest.mark.asyncio
+async def test_auto_refresh_is_skipped_when_another_screen_is_displayed(
+    fetch_projects_mock: AsyncMock,
+    fetch_issue_types_mock: AsyncMock,
+    fetch_statuses_mock: AsyncMock,
+    search_issues_mock: AsyncMock,
+    app,
+):
+    async with app.run_test() as pilot:
+        main_screen = cast('MainScreen', app.screen)  # type:ignore[name-defined] # noqa: F821
+        main_screen._last_search = {'next_page_token': None, 'search_term': None, 'page': 1}
+        # WHEN
+        await app.push_screen(QuitScreen())
+        await pilot.pause()
+        main_screen._auto_refresh_search_results()
+        await pilot.pause()
+        # THEN
+        search_issues_mock.assert_not_called()
+
+
+@patch('jiratui.widgets.screen.MainScreen._search_work_items')
+@patch('jiratui.widgets.screen.MainScreen.fetch_statuses')
+@patch('jiratui.widgets.screen.MainScreen.fetch_issue_types')
+@patch('jiratui.widgets.screen.MainScreen.fetch_projects')
+@pytest.mark.asyncio
+async def test_auto_refresh_ignores_filters_modified_after_the_last_search(
+    fetch_projects_mock: AsyncMock,
+    fetch_issue_types_mock: AsyncMock,
+    fetch_statuses_mock: AsyncMock,
+    search_work_items_mock: AsyncMock,
+    app,
+):
+    # GIVEN
+    app.config.search_results_truncate_work_item_summary = 0
+    app.config.search_results_style_work_item_status = False
+    app.config.search_results_style_work_item_type = False
+    search_work_items_mock.return_value = _work_items_search_result(['WI-1'])
+    async with app.run_test() as pilot:
+        main_screen = cast('MainScreen', app.screen)  # type:ignore[name-defined] # noqa: F821
+        main_screen.jql_expression_input.value = 'status = Done'
+        await main_screen.search_issues()
+        # the user types a JQL expression but does not search yet
+        main_screen.jql_expression_input.value = 'status ='
+        await pilot.pause()
+        # WHEN
+        main_screen._auto_refresh_search_results()
+        await app.workers.wait_for_complete()
+        # THEN
+        assert search_work_items_mock.await_count == 2
+        refresh_criteria = search_work_items_mock.await_args.kwargs['criteria']
+        assert refresh_criteria.jql_expression == 'status = Done'

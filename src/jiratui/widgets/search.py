@@ -265,6 +265,19 @@ class IssuesSearchResultsTable(Actionable, DataTable, inherit_bindings=False):  
         for index, (issue, cells) in enumerate(zip(response.issues, rows, strict=True)):
             self.add_row(index + 1, *cells.values(), key=f'{issue.id}#{issue.key}')
 
+    def move_cursor_to_work_item(self, row_key: str | None) -> None:
+        """Moves the cursor to the row of a work item, if the work item is in the search results.
+
+        Args:
+            row_key: the key of the row of the work item, i.e. `<id>#<key>`.
+
+        Returns:
+            None
+        """
+
+        if row_key and row_key in self.rows:
+            self.move_cursor(row=self.get_row_index(row_key))
+
     def _get_maximum_summary_column_width(self, rows: list[dict], summary_column: str) -> int:
         """Calculates the width left by the other columns of the search results for the summary column.
 
@@ -521,6 +534,9 @@ class SearchResultsContainer(Container):
     pagination: Reactive[dict | None] = reactive(None)
     """Reactive attribute that contains pagination details associated to the search results. This is used setting the
     widget's border subtitle with the page number and total records in the result."""
+    auto_refresh_legend: Reactive[str | None] = reactive(None, init=False)
+    """A legend that describes the state of the auto-refresh of the search results. It is displayed in the border
+    subtitle after the pagination details."""
 
     def __init__(self, *args, **kwargs):
         border_title = kwargs.pop('border_title', None)
@@ -531,18 +547,25 @@ class SearchResultsContainer(Container):
         self._total_pages: int | None = None
 
     def _update_border_subtitle(self) -> None:
+        legend: str | None
         if self._total_results is None:
-            self.border_subtitle = (
-                None if self._page_number is None else f'Page {self._page_number}'
-            )
+            legend = None if self._page_number is None else f'Page {self._page_number}'
         else:
             self._total_pages = self._total_results // self.app.config.search_results_per_page  # type:ignore[attr-defined]
             if (self._total_results % self.app.config.search_results_per_page) > 0:  # type:ignore[attr-defined]
                 self._total_pages += 1
             if self._page_number is not None:
-                self.border_subtitle = f'Page {self._page_number} of {self._total_pages} (total: {self._total_results})'
+                legend = f'Page {self._page_number} of {self._total_pages} (total: {self._total_results})'
             else:
-                self.border_subtitle = None
+                legend = None
+        if self.auto_refresh_legend:
+            legend = (
+                f'{legend} | {self.auto_refresh_legend}' if legend else self.auto_refresh_legend
+            )
+        self.border_subtitle = legend
+
+    def watch_auto_refresh_legend(self, value: str | None = None) -> None:
+        self._update_border_subtitle()
 
     def watch_pagination(self, response: dict) -> None:
         if response:

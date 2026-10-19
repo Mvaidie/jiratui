@@ -216,6 +216,10 @@ class ApplicationConfiguration(BaseSettings):
     search_results_default_order: WorkItemsSearchOrderBy = WorkItemsSearchOrderBy.CREATED_DESC
     """The default order for search results. Accepts values from [WorkItemsSearchOrderBy](#jiratui.models.WorkItemsSearchOrderBy) enum: `CREATED_ASC`,
     `CREATED_DESC`, `PRIORITY_ASC`, `PRIORITY_DESC`, `KEY_ASC`, `KEY_DESC`, `STATUS_ASC`, `STATUS_DESC`."""
+    search_results_auto_refresh_interval: int | None = None
+    """When set, the search results are refreshed automatically every this number of seconds (minimum 10) from the
+    start of the application. The auto-refresh can be enabled/disabled at any time with its key binding; when this
+    setting is not set the interval is 60 seconds."""
     search_results_columns: list[str] | None = None
     """The columns you want to see in the search results, in the order you want to see them.
     The columns supported are: `priority`, `status`, `issuetype`, `parent`, `assignee`, `reporter`, `summary`. The
