@@ -761,3 +761,13 @@ def test_legacy_action_focus_status_dropdown_in_work_item_details():
 
 def test_legacy_action_edit_comment():
     assert KEY_BINDINGS_LEGACY.get(SupportedActions.EDIT_COMMENT.value).get('keys') == ['e']
+
+
+def test_standard_action_toggle_auto_refresh():
+    assert KEY_BINDINGS_STANDARD.get(SupportedActions.TOGGLE_AUTO_REFRESH.value).get('keys') == [
+        'alt+r'
+    ]
+
+
+def test_legacy_action_toggle_auto_refresh():
+    assert KEY_BINDINGS_LEGACY.get(SupportedActions.TOGGLE_AUTO_REFRESH.value).get('keys') == ['r']

@@ -5421,6 +5421,13 @@ def test_main_screen_actions_and_bindings(bindings: dict):
             show=True,
             tooltip='Creates a Git branch for a work item',
         ),
+        UIAction(
+            action='toggle_auto_refresh',
+            keys=bindings.get('toggle_auto_refresh', {}).get('keys', []),
+            description='Auto-refresh',
+            show=True,
+            tooltip='Toggles the auto-refresh of the search results',
+        ),
     ]
     assert MainScreen.BINDINGS == [
         Binding(
@@ -5731,6 +5738,18 @@ def test_main_screen_actions_and_bindings(bindings: dict):
             key_display=None,
             priority=False,
             tooltip='Creates a Git branch for a work item',
+            id=None,
+            system=False,
+            group=None,
+        ),
+        Binding(
+            key=bindings.get('toggle_auto_refresh', {}).get('keys', [])[0],
+            action='toggle_auto_refresh',
+            description='Auto-refresh',
+            show=True,
+            key_display=None,
+            priority=False,
+            tooltip='Toggles the auto-refresh of the search results',
             id=None,
             system=False,
             group=None,

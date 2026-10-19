@@ -231,6 +231,7 @@ context.
 | `alt+j`      | Focuses the JQL search input                                                | Main Screen                                                             |
 | `/`          | Search work items                                                           | Main Screen                                                             |
 | `ctrl+r`     | Search work items                                                           | Main Screen                                                             |
+| `alt+r`      | Toggles the auto-refresh of the search results                              | Main Screen                                                             |
 | `^f`         | Perform a full-text search of work items                                    | Main Screen                                                             |
 | `1`          | Focuses the search results table                                            | Main Screen                                                             |
 | `2`          | Focuses the work item information tab                                       | Main Screen                                                             |
@@ -308,6 +309,7 @@ context.
 | `v`                 | Focuses the active-sprint search input                   |         |
 | `j`                 | Focuses the JQL search input                             |         |
 | `^r`                | Search work items                                        |         |
+| `r`                 | Toggles the auto-refresh of the search results           |         |
 | `/`                 | Perform a full-text search of work items                 |         |
 | `1`                 | Focuses the search results table                         |         |
 | `2`                 | Focuses the work item information tab                    |         |
@@ -495,6 +497,21 @@ term is controlled by the setting `search_results_page_filtering_minimum_term_le
 ```{tip}
 Pressing `escape` hides the search box.
 ```
+
+### Auto-refresh of the Search Results
+
+The search results can be refreshed automatically. When the auto-refresh is enabled, JiraTUI repeats the last search
+every 60 seconds; the search refreshes the current page of results with the current values of the filters. The
+highlighted work item stays highlighted and the focus does not move, so you can keep working while the results are
+refreshed. The legend at the bottom of the work items pane shows the interval and the time of the last refresh.
+
+Press `r` (legacy key bindings) or `alt+r` (standard key bindings), displayed as `Auto-refresh` in the footer, to
+enable/disable the auto-refresh at any time. To
+enable it from the start of the application set the number of seconds between refreshes (minimum 10) in the setting
+`search_results_auto_refresh_interval`.
+
+The auto-refresh is skipped while another screen is displayed (e.g. when creating a work item), while a search is
+running or while the search results are being filtered.
 
 ### Setting Search Filters
 

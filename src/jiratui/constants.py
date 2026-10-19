@@ -10,3 +10,7 @@ LOGGER_NAME = 'jiratui'
 LOG_FILE_FILE_NAME = 'jiratui.log'
 DEFAULT_JIRA_API_VERSION = 3
 FULL_TEXT_SEARCH_DEFAULT_MINIMUM_TERM_LENGTH = 3
+SEARCH_RESULTS_AUTO_REFRESH_DEFAULT_INTERVAL = 60
+"""The number of seconds between 2 refreshes of the search results when the user does not configure an interval."""
+SEARCH_RESULTS_AUTO_REFRESH_MINIMUM_INTERVAL = 10
+"""The minimum number of seconds between 2 refreshes of the search results."""

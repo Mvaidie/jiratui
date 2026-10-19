@@ -56,6 +56,7 @@ def config_for_testing() -> ApplicationConfiguration:
         show_keybinding_hints=False,
         enable_goto=False,
         search_results_columns=None,
+        search_results_auto_refresh_interval=None,
     )
     return config_mock
 
@@ -90,6 +91,7 @@ def config_for_testing_jira_dc() -> ApplicationConfiguration:
         show_keybinding_hints=False,
         enable_goto=False,
         search_results_columns=None,
+        search_results_auto_refresh_interval=None,
     )
     return config_mock
 
@@ -125,6 +127,7 @@ def jira_api_controller() -> APIController:
         show_keybinding_hints=False,
         enable_goto=False,
         search_results_columns=None,
+        search_results_auto_refresh_interval=None,
     )
     return APIController(config_mock)
 
@@ -160,6 +163,7 @@ def jira_api_controller_for_jira_dc() -> APIController:
         show_keybinding_hints=False,
         enable_goto=False,
         search_results_columns=None,
+        search_results_auto_refresh_interval=None,
     )
     return APIController(config_mock)
 
@@ -202,6 +206,7 @@ def app():
         enable_recent_history=False,
         enable_goto=False,
         search_results_columns=None,
+        search_results_auto_refresh_interval=None,
         show_favourite_filters_in_jql_editor=False,
     )
     app = JiraApp(config_mock)

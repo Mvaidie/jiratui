@@ -16,6 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 `Key`, `Type`, `Priority`, `Status`, `Summary` and `Assignee`. The column `Parent` is no longer displayed by default;
 it can still be enabled with the setting `search_results_columns`. When the name of a priority starts with a code
 followed by a colon, e.g. `P1: Blocker`, the search results only display the code, e.g. `P1`.
+- Add the auto-refresh of the search results. It repeats the last search every 60 seconds (or the number of seconds of
+the setting `search_results_auto_refresh_interval`) without moving the focus or losing the highlighted work item. It
+can be enabled/disabled with the keys `r` (legacy) or `alt+r` (standard), displayed as `Auto-refresh` in the footer;
+it is enabled on startup when the setting `search_results_auto_refresh_interval` is set.
 
 ### Minor Improvements
 

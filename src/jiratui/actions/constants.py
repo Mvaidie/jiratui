@@ -81,6 +81,7 @@ class SupportedActions(Enum):
     SELECT_CURSOR = 'select_cursor'
     SERVER_INFO = 'server_info'
     SHOW_RECENT_HISTORY = 'show_recent_history'
+    TOGGLE_AUTO_REFRESH = 'toggle_auto_refresh'
     UNLINK_WORK_ITEM = 'unlink_work_item'
     VIEW_CONTENT = 'view_content'
     VIEW_WORKLOG = 'view_worklog'
@@ -178,6 +179,12 @@ KEY_BINDINGS_LEGACY = {
         'show': True,
         'description': '\uf002',
         'tooltip': 'Search work items',
+    },
+    SupportedActions.TOGGLE_AUTO_REFRESH.value: {
+        'keys': ['r'],
+        'show': True,
+        'description': 'Auto-refresh',
+        'tooltip': 'Toggles the auto-refresh of the search results',
     },
     SupportedActions.FIND_BY_TEXT.value: {
         'keys': ['/'],
@@ -644,6 +651,12 @@ KEY_BINDINGS_STANDARD = {
         'show': True,
         'description': '\uf002',
         'tooltip': 'Search work items',
+    },
+    SupportedActions.TOGGLE_AUTO_REFRESH.value: {
+        'keys': ['alt+r'],
+        'show': True,
+        'description': 'Auto-refresh',
+        'tooltip': 'Toggles the auto-refresh of the search results',
     },
     SupportedActions.FIND_BY_TEXT.value: {
         'keys': ['ctrl+f'],
