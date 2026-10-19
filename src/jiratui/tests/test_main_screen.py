@@ -96,6 +96,8 @@ def app() -> JiraApp:
         enable_recent_history=False,
         enable_goto=False,
         search_results_columns=None,
+        stale_work_items_statuses=None,
+        customer_field=None,
         search_results_auto_refresh_interval=None,
         styling=None,
     )
@@ -1872,3 +1874,154 @@ async def test_fetch_boards_displays_the_type_of_the_boards(
         # THEN
         assert boards == [('CP — Backlog (Kanban)', 27), ('Team Core (Scrum)', 84)]
         get_project_boards_mock.assert_awaited_once_with('CP')
+
+
+def _work_item_with_status(key: str, status: str) -> JiraIssue:
+    return JiraIssue(
+        id=key.split('-')[1],
+        key=key,
+        summary=f'summary of {key}',
+        status=IssueStatus(id='1', name=status),
+        issue_type=IssueType(id='1', name='Task'),
+    )
+
+
+@patch.object(APIController, 'find_stale_work_items')
+@patch('jiratui.widgets.screen.MainScreen.fetch_statuses')
+@patch('jiratui.widgets.screen.MainScreen.fetch_issue_types')
+@patch('jiratui.widgets.screen.MainScreen.fetch_projects')
+@pytest.mark.asyncio
+async def test_find_stale_work_items_checks_the_work_items_in_the_configured_statuses(
+    fetch_projects_mock: AsyncMock,
+    fetch_issue_types_mock: AsyncMock,
+    fetch_statuses_mock: AsyncMock,
+    find_stale_work_items_mock: AsyncMock,
+    app,
+):
+    # GIVEN
+    app.config.stale_work_items_statuses = ['In Development', ' blocked ']
+    app.config.stale_work_items_days = 7
+    find_stale_work_items_mock.return_value = APIControllerResponse(result={'WI-1'})
+    response = JiraIssueSearchResponse(
+        issues=[
+            _work_item_with_status('WI-1', 'In Development'),
+            _work_item_with_status('WI-2', 'Done'),
+            _work_item_with_status('WI-3', 'Blocked'),
+        ]
+    )
+    async with app.run_test():
+        main_screen = cast('MainScreen', app.screen)  # type:ignore[name-defined] # noqa: F821
+        # WHEN
+        stale_work_items = await main_screen._find_stale_work_items(response)
+        # THEN
+        assert stale_work_items == {'WI-1'}
+        find_stale_work_items_mock.assert_awaited_once_with(['WI-1', 'WI-3'], days=7)
+
+
+@pytest.mark.parametrize('statuses', [None, []])
+@patch.object(APIController, 'find_stale_work_items')
+@patch('jiratui.widgets.screen.MainScreen.fetch_statuses')
+@patch('jiratui.widgets.screen.MainScreen.fetch_issue_types')
+@patch('jiratui.widgets.screen.MainScreen.fetch_projects')
+@pytest.mark.asyncio
+async def test_find_stale_work_items_is_disabled_without_statuses(
+    fetch_projects_mock: AsyncMock,
+    fetch_issue_types_mock: AsyncMock,
+    fetch_statuses_mock: AsyncMock,
+    find_stale_work_items_mock: AsyncMock,
+    statuses,
+    app,
+):
+    # GIVEN
+    app.config.stale_work_items_statuses = statuses
+    response = JiraIssueSearchResponse(issues=[_work_item_with_status('WI-1', 'In Development')])
+    async with app.run_test():
+        main_screen = cast('MainScreen', app.screen)  # type:ignore[name-defined] # noqa: F821
+        # WHEN
+        stale_work_items = await main_screen._find_stale_work_items(response)
+        # THEN
+        assert stale_work_items == set()
+        find_stale_work_items_mock.assert_not_called()
+
+
+@patch.object(APIController, 'find_stale_work_items')
+@patch('jiratui.widgets.screen.MainScreen.fetch_statuses')
+@patch('jiratui.widgets.screen.MainScreen.fetch_issue_types')
+@patch('jiratui.widgets.screen.MainScreen.fetch_projects')
+@pytest.mark.asyncio
+async def test_find_stale_work_items_ignores_errors(
+    fetch_projects_mock: AsyncMock,
+    fetch_issue_types_mock: AsyncMock,
+    fetch_statuses_mock: AsyncMock,
+    find_stale_work_items_mock: AsyncMock,
+    app,
+):
+    # GIVEN
+    app.config.stale_work_items_statuses = ['In Development']
+    app.config.stale_work_items_days = 7
+    find_stale_work_items_mock.return_value = APIControllerResponse(success=False, error='error')
+    response = JiraIssueSearchResponse(issues=[_work_item_with_status('WI-1', 'In Development')])
+    async with app.run_test():
+        main_screen = cast('MainScreen', app.screen)  # type:ignore[name-defined] # noqa: F821
+        # WHEN
+        stale_work_items = await main_screen._find_stale_work_items(response)
+        # THEN
+        assert stale_work_items == set()
+
+
+@patch.object(APIController, 'find_work_items_with_customers')
+@patch('jiratui.widgets.screen.MainScreen.fetch_statuses')
+@patch('jiratui.widgets.screen.MainScreen.fetch_issue_types')
+@patch('jiratui.widgets.screen.MainScreen.fetch_projects')
+@pytest.mark.asyncio
+async def test_find_work_items_with_customers_checks_all_the_work_items(
+    fetch_projects_mock: AsyncMock,
+    fetch_issue_types_mock: AsyncMock,
+    fetch_statuses_mock: AsyncMock,
+    find_work_items_with_customers_mock: AsyncMock,
+    app,
+):
+    # GIVEN
+    app.config.customer_field = ' Customer '
+    find_work_items_with_customers_mock.return_value = APIControllerResponse(result={'WI-2'})
+    response = JiraIssueSearchResponse(
+        issues=[
+            _work_item_with_status('WI-1', 'Done'),
+            _work_item_with_status('WI-2', 'In Development'),
+        ]
+    )
+    async with app.run_test():
+        main_screen = cast('MainScreen', app.screen)  # type:ignore[name-defined] # noqa: F821
+        # WHEN
+        work_items = await main_screen._find_work_items_with_customers(response)
+        # THEN
+        assert work_items == {'WI-2'}
+        find_work_items_with_customers_mock.assert_awaited_once_with(
+            ['WI-1', 'WI-2'], customer_field='Customer'
+        )
+
+
+@pytest.mark.parametrize('customer_field', [None, '', '  '])
+@patch.object(APIController, 'find_work_items_with_customers')
+@patch('jiratui.widgets.screen.MainScreen.fetch_statuses')
+@patch('jiratui.widgets.screen.MainScreen.fetch_issue_types')
+@patch('jiratui.widgets.screen.MainScreen.fetch_projects')
+@pytest.mark.asyncio
+async def test_find_work_items_with_customers_is_disabled_without_field(
+    fetch_projects_mock: AsyncMock,
+    fetch_issue_types_mock: AsyncMock,
+    fetch_statuses_mock: AsyncMock,
+    find_work_items_with_customers_mock: AsyncMock,
+    customer_field,
+    app,
+):
+    # GIVEN
+    app.config.customer_field = customer_field
+    response = JiraIssueSearchResponse(issues=[_work_item_with_status('WI-1', 'Done')])
+    async with app.run_test():
+        main_screen = cast('MainScreen', app.screen)  # type:ignore[name-defined] # noqa: F821
+        # WHEN
+        work_items = await main_screen._find_work_items_with_customers(response)
+        # THEN
+        assert work_items == set()
+        find_work_items_with_customers_mock.assert_not_called()

@@ -14,6 +14,7 @@ from typing import Any
 from dateutil.parser import isoparse  # type:ignore[import-untyped]
 
 from jiratui.api.api import JiraAPI, JiraAPIv2, JiraDataCenterAPI, JiraSoftwareCloudAPI
+from jiratui.api.utils import build_jql_field_reference
 from jiratui.api_controller.constants import (
     MAXIMUM_PAGE_NUMBER_LIST_GROUPS,
     MAXIMUM_PAGE_NUMBER_SEARCH_PROJECTS,
@@ -301,6 +302,74 @@ class APIController:
 
         boards.sort(key=lambda board: board.name.lower())
         return APIControllerResponse(result=boards)
+
+    async def find_stale_work_items(
+        self, work_item_keys: list[str], days: int
+    ) -> APIControllerResponse:
+        """Finds the work items whose status did not change for more than a number of days.
+
+        The work items created during the last `days` days are ignored, because the status of a work item that never
+        changed status since its creation did not change either.
+
+        Args:
+            work_item_keys: the keys of the work items to check.
+            days: the number of days.
+
+        Returns:
+            An instance of `APIControllerResponse` with the set of keys of the work items whose status did not change
+            for more than `days` days or, `success = False` with an `error` if the search fails.
+        """
+
+        return await self._find_work_items_matching(
+            work_item_keys,
+            f'NOT status CHANGED AFTER -{days}d AND created < -{days}d',
+            'stale work items',
+        )
+
+    async def find_work_items_with_customers(
+        self, work_item_keys: list[str], customer_field: str
+    ) -> APIControllerResponse:
+        """Finds the work items that have at least one customer, i.e. a value in the field of the customers.
+
+        Args:
+            work_item_keys: the keys of the work items to check.
+            customer_field: the name, e.g. `Customer`, or the ID, e.g. `customfield_10085`, of the field of the
+            customers.
+
+        Returns:
+            An instance of `APIControllerResponse` with the set of keys of the work items that have at least one
+            customer or, `success = False` with an `error` if the search fails.
+        """
+
+        return await self._find_work_items_matching(
+            work_item_keys,
+            f'{build_jql_field_reference(customer_field)} is not EMPTY',
+            'work items with customers',
+        )
+
+    async def _find_work_items_matching(
+        self, work_item_keys: list[str], jql_condition: str, description: str
+    ) -> APIControllerResponse:
+        # finds the work items with these keys that match a JQL condition; this requires a single request
+        if not work_item_keys:
+            return APIControllerResponse(result=set())
+        keys = ', '.join(f'"{key}"' for key in work_item_keys)
+        try:
+            response: dict = await self.api.search_issues(
+                jql_query=f'key in ({keys}) AND {jql_condition}',
+                fields=['key'],
+                limit=len(work_item_keys),
+            )
+        except Exception as e:
+            exception_details: dict = self._extract_exception_details(e)
+            self.logger.error(
+                f'Unable to find the {description}',
+                extra={'work_item_keys': work_item_keys, **exception_details.get('extra', {})},
+            )
+            return APIControllerResponse(success=False, error=exception_details.get('message'))
+        return APIControllerResponse(
+            result={issue.get('key') for issue in response.get('issues', []) if issue.get('key')}
+        )
 
     async def get_board_filter_id(self, board_id: int) -> APIControllerResponse:
         """Retrieves the ID of the filter (i.e. saved JQL search) that defines the work items of a board.

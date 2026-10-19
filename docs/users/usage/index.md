@@ -498,6 +498,22 @@ term is controlled by the setting `search_results_page_filtering_minimum_term_le
 Pressing `escape` hides the search box.
 ```
 
+### Stale Work Items
+
+The search results display a red dot (`●`) before the summary of the work items that are stale, i.e. work items
+that are in one of the statuses of the setting `stale_work_items_statuses` for more than `stale_work_items_days`
+days (the default is 7). The default statuses are `In Development`, `In Review`, `In Test`, `Blocked` and `Resolved`;
+set the setting to an empty list to disable this feature.
+
+JiraTUI checks the history of the statuses of the work items of the current page of results: a work item is stale
+when its status did not change during the last days.
+
+### Work Items with Customers
+
+The search results display a blue dot (`●`) after the type of the work items that have at least one customer, i.e.
+a value in the field of the setting `customer_field`. The field is identified by its name (the default is `Customer`)
+or by its ID, e.g. `customfield_10085`; set the setting to an empty value to disable this feature.
+
 ### Auto-refresh of the Search Results
 
 The search results can be refreshed automatically. When the auto-refresh is enabled, JiraTUI repeats the last search

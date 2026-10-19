@@ -59,6 +59,8 @@ def app() -> JiraApp:
         enable_recent_history=False,
         enable_goto=False,
         search_results_columns=None,
+        stale_work_items_statuses=None,
+        customer_field=None,
         search_results_auto_refresh_interval=None,
         styling=None,
     )
@@ -1036,3 +1038,87 @@ async def test_search_results_table_priority_column_uses_the_color_of_the_priori
         assert str(cell) == 'P1'
         assert str(cell.style) == '#F25555'
         get_style_for_work_item_priority_mock.assert_called_once_with('P1: Blocker / No workaround')
+
+
+@patch('jiratui.widgets.screen.MainScreen.search_issues')
+@patch('jiratui.widgets.screen.MainScreen.fetch_statuses')
+@patch('jiratui.widgets.screen.MainScreen.fetch_issue_types')
+@patch('jiratui.widgets.screen.MainScreen.fetch_projects')
+@pytest.mark.asyncio
+async def test_search_results_table_displays_a_red_dot_before_the_summary_of_stale_work_items(
+    search_projects_mock: AsyncMock,
+    fetch_issue_types_mock: AsyncMock,
+    fetch_statuses_mock: AsyncMock,
+    search_issues_mock: AsyncMock,
+    app,
+):
+    # GIVEN
+    app.config.search_results_truncate_work_item_summary = 12
+    app.config.search_results_style_work_item_status = False
+    app.config.search_results_style_work_item_type = False
+    issues = [
+        JiraIssue(
+            id=str(index),
+            key=f'WI-{index}',
+            summary='a long summary',
+            status=IssueStatus(id='1', name='In Development'),
+            issue_type=IssueType(id='1', name='Task'),
+        )
+        for index in (1, 2)
+    ]
+    async with app.run_test():
+        main_screen = cast('MainScreen', app.screen)  # type:ignore[name-defined] # noqa: F821
+        table = main_screen.search_results_table
+        table.stale_work_item_keys = {'WI-1'}
+        # WHEN
+        table.search_results = JiraIssueSearchResponse(issues=issues)
+        # THEN
+        summary_column = [str(c.label) for c in table.columns.values()].index('Summary')
+        stale_summary = table.get_cell_at(Coordinate(0, summary_column))
+        other_summary = table.get_cell_at(Coordinate(1, summary_column))
+        # the red dot is part of the maximum width of the summary
+        assert str(stale_summary) == '● a long ...'
+        assert str(stale_summary.spans[0].style) == '#F25555'
+        assert str(other_summary) == 'a long su...'
+
+
+@patch('jiratui.widgets.screen.MainScreen.search_issues')
+@patch('jiratui.widgets.screen.MainScreen.fetch_statuses')
+@patch('jiratui.widgets.screen.MainScreen.fetch_issue_types')
+@patch('jiratui.widgets.screen.MainScreen.fetch_projects')
+@pytest.mark.asyncio
+async def test_search_results_table_displays_a_blue_dot_after_the_type_of_work_items_with_customers(
+    search_projects_mock: AsyncMock,
+    fetch_issue_types_mock: AsyncMock,
+    fetch_statuses_mock: AsyncMock,
+    search_issues_mock: AsyncMock,
+    app,
+):
+    # GIVEN
+    app.config.search_results_truncate_work_item_summary = 0
+    app.config.search_results_style_work_item_status = False
+    app.config.search_results_style_work_item_type = False
+    issues = [
+        JiraIssue(
+            id=str(index),
+            key=f'WI-{index}',
+            summary='summary',
+            status=IssueStatus(id='1', name='To Do'),
+            issue_type=IssueType(id='1', name='Task'),
+        )
+        for index in (1, 2)
+    ]
+    async with app.run_test():
+        main_screen = cast('MainScreen', app.screen)  # type:ignore[name-defined] # noqa: F821
+        table = main_screen.search_results_table
+        table.customer_work_item_keys = {'WI-1'}
+        # WHEN
+        table.search_results = JiraIssueSearchResponse(issues=issues)
+        # THEN
+        type_column = [str(c.label) for c in table.columns.values()].index('Type')
+        type_with_customer = table.get_cell_at(Coordinate(0, type_column))
+        assert str(type_with_customer) == 'Task ●'
+        assert str(type_with_customer.spans[-1].style) == '#4688EC'
+        assert str(table.get_cell_at(Coordinate(1, type_column))) == 'Task'
+        # the key is not modified
+        assert str(table.get_cell_at(Coordinate(0, 1))) == 'WI-1'

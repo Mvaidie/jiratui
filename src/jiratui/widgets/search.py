@@ -188,6 +188,12 @@ class IssuesSearchResultsTable(Actionable, DataTable, inherit_bindings=False):  
     ] + [Binding('escape', 'hide', 'Hide search input', show=False)]
 
     SMALLEST_MAXIMUM_WIDTH_FOR_SUMMARY_COLUMN = 20
+    STALE_WORK_ITEM_MARKER = '● '
+    """The marker displayed before the summary of the stale work items."""
+    STALE_WORK_ITEM_MARKER_STYLE = '#F25555'
+    CUSTOMER_WORK_ITEM_MARKER = ' ●'
+    """The marker displayed after the type of the work items with at least one customer."""
+    CUSTOMER_WORK_ITEM_MARKER_STYLE = '#4688EC'
     """The minimum width of the summary column. Otherwise, the summary column uses the width left by the other columns."""
 
     class WorkItemDeleted(Message):
@@ -211,6 +217,10 @@ class IssuesSearchResultsTable(Actionable, DataTable, inherit_bindings=False):  
         self.current_work_item_key: str | None = None
         self.current_work_item_id: str | None = None
         self._initial_results_set: JiraIssueSearchResponse | None = None
+        self.stale_work_item_keys: set[str] = set()
+        """The keys of the work items whose summary is displayed after a red dot because they are stale."""
+        self.customer_work_item_keys: set[str] = set()
+        """The keys of the work items whose type is displayed before a blue dot because they have customers."""
 
     def set_initial_results_set(self, data: JiraIssueSearchResponse | None = None):
         self._initial_results_set = data
@@ -265,9 +275,29 @@ class IssuesSearchResultsTable(Actionable, DataTable, inherit_bindings=False):  
                 or self._get_maximum_summary_column_width(rows, summary_column)
             )
             for issue, cells in zip(response.issues, rows, strict=True):
-                cells[summary_column] = Text(issue.cleaned_summary(maximum_summary_column_width))
+                cells[summary_column] = self._build_summary_cell(
+                    issue, maximum_summary_column_width
+                )
         for index, (issue, cells) in enumerate(zip(response.issues, rows, strict=True)):
             self.add_row(index + 1, *cells.values(), key=f'{issue.id}#{issue.key}')
+
+    def _build_summary_cell(self, item: JiraIssue, maximum_width: int) -> Text:
+        """Builds the cell with the summary of a work item; the summary of a stale work item starts with a red dot.
+
+        Args:
+            item: the work item.
+            maximum_width: the maximum width of the cell.
+
+        Returns:
+            The text of the cell.
+        """
+
+        if item.key not in self.stale_work_item_keys:
+            return Text(item.cleaned_summary(maximum_width))
+        return Text.assemble(
+            (self.STALE_WORK_ITEM_MARKER, self.STALE_WORK_ITEM_MARKER_STYLE),
+            item.cleaned_summary(max(1, maximum_width - len(self.STALE_WORK_ITEM_MARKER))),
+        )
 
     def move_cursor_to_work_item(self, row_key: str | None) -> None:
         """Moves the cursor to the row of a work item, if the work item is in the search results.
@@ -334,7 +364,12 @@ class IssuesSearchResultsTable(Actionable, DataTable, inherit_bindings=False):  
                 style_work_type = ''
                 if self.app.config.search_results_style_work_item_type:  # type:ignore[attr-defined]
                     style_work_type = get_style_for_work_item_type(item.issue_type.name.lower())
-                cells[column_name] = Text(item.show_work_item_type(8), style=style_work_type)
+                type_cell = Text(item.show_work_item_type(8), style=style_work_type)
+                if item.key in self.customer_work_item_keys:
+                    type_cell.append(
+                        self.CUSTOMER_WORK_ITEM_MARKER, style=self.CUSTOMER_WORK_ITEM_MARKER_STYLE
+                    )
+                cells[column_name] = type_cell
             elif field_name == SearchFieldId.SUMMARY.value:
                 cells[column_name] = Text(item.cleaned_summary())
             elif field_name == SearchFieldId.ASSIGNEE.value:

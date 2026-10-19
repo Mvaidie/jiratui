@@ -2,7 +2,11 @@ from datetime import datetime
 
 import pytest
 
-from jiratui.api.utils import build_issue_search_jql, parse_required_fields_from_meta
+from jiratui.api.utils import (
+    build_issue_search_jql,
+    build_jql_field_reference,
+    parse_required_fields_from_meta,
+)
 from jiratui.models import WorkItemsSearchOrderBy
 
 
@@ -152,3 +156,16 @@ def test_parse_required_fields_from_meta_with_all_fields_not_required():
     result = parse_required_fields_from_meta(metadata)
     # THEN
     assert result == []
+
+
+@pytest.mark.parametrize(
+    'field, expected',
+    [
+        ('Customer', '"Customer"'),
+        (' Customer segments ', '"Customer segments"'),
+        ('customfield_10085', 'cf[10085]'),
+        ('a "quoted" name', '"a \\"quoted\\" name"'),
+    ],
+)
+def test_build_jql_field_reference(field: str, expected: str):
+    assert build_jql_field_reference(field) == expected

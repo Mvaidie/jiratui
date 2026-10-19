@@ -5744,3 +5744,71 @@ async def test_count_issues_with_board(
     # THEN
     assert response == APIControllerResponse(result=3)
     assert work_items_search_approximate_count_mock.call_args.kwargs['filter_id'] == '10001'
+
+
+@pytest.mark.asyncio
+@patch.object(JiraAPI, 'search_issues')
+async def test_find_stale_work_items(
+    search_issues_mock: AsyncMock, jira_api_controller: APIController
+):
+    # GIVEN
+    search_issues_mock.return_value = {'issues': [{'id': '1', 'key': 'WI-1'}]}
+    # WHEN
+    result = await jira_api_controller.find_stale_work_items(['WI-1', 'WI-2'], days=7)
+    # THEN
+    assert result == APIControllerResponse(result={'WI-1'})
+    search_issues_mock.assert_awaited_once_with(
+        jql_query='key in ("WI-1", "WI-2") AND NOT status CHANGED AFTER -7d AND created < -7d',
+        fields=['key'],
+        limit=2,
+    )
+
+
+@pytest.mark.asyncio
+@patch.object(JiraAPI, 'search_issues')
+async def test_find_stale_work_items_without_work_items(
+    search_issues_mock: AsyncMock, jira_api_controller: APIController
+):
+    # WHEN
+    result = await jira_api_controller.find_stale_work_items([], days=7)
+    # THEN
+    assert result == APIControllerResponse(result=set())
+    search_issues_mock.assert_not_called()
+
+
+@pytest.mark.asyncio
+@patch.object(JiraAPI, 'search_issues')
+async def test_find_stale_work_items_raises_exception(
+    search_issues_mock: AsyncMock, jira_api_controller: APIController
+):
+    # GIVEN
+    search_issues_mock.side_effect = ValueError('test error')
+    # WHEN
+    result = await jira_api_controller.find_stale_work_items(['WI-1'], days=7)
+    # THEN
+    assert result == APIControllerResponse(success=False, error='test error')
+
+
+@pytest.mark.parametrize(
+    'customer_field, expected_condition',
+    [('Customer', '"Customer" is not EMPTY'), ('customfield_10085', 'cf[10085] is not EMPTY')],
+)
+@pytest.mark.asyncio
+@patch.object(JiraAPI, 'search_issues')
+async def test_find_work_items_with_customers(
+    search_issues_mock: AsyncMock,
+    customer_field: str,
+    expected_condition: str,
+    jira_api_controller: APIController,
+):
+    # GIVEN
+    search_issues_mock.return_value = {'issues': [{'id': '2', 'key': 'WI-2'}]}
+    # WHEN
+    result = await jira_api_controller.find_work_items_with_customers(
+        ['WI-1', 'WI-2'], customer_field=customer_field
+    )
+    # THEN
+    assert result == APIControllerResponse(result={'WI-2'})
+    search_issues_mock.assert_awaited_once_with(
+        jql_query=f'key in ("WI-1", "WI-2") AND {expected_condition}', fields=['key'], limit=2
+    )

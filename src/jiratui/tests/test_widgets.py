@@ -39,6 +39,8 @@ def app() -> JiraApp:
         show_keybinding_hints=False,
         enable_recent_history=False,
         enable_goto=False,
+        stale_work_items_statuses=None,
+        customer_field=None,
         search_results_auto_refresh_interval=None,
         styling=None,
     )

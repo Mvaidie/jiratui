@@ -46,6 +46,8 @@ def app() -> JiraApp:
         enable_recent_history=False,
         enable_goto=False,
         search_results_columns=None,
+        stale_work_items_statuses=None,
+        customer_field=None,
         search_results_auto_refresh_interval=None,
         styling=None,
     )

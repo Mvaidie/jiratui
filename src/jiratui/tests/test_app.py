@@ -45,6 +45,8 @@ def app_with_unrecognized_config_theme() -> JiraApp:
         enable_recent_history=False,
         enable_goto=False,
         search_results_columns=None,
+        stale_work_items_statuses=None,
+        customer_field=None,
         search_results_auto_refresh_interval=None,
         styling=None,
     )
@@ -85,6 +87,8 @@ def app_with_input_and_config_theme() -> JiraApp:
         enable_recent_history=False,
         enable_goto=False,
         search_results_columns=None,
+        stale_work_items_statuses=None,
+        customer_field=None,
         search_results_auto_refresh_interval=None,
         styling=None,
     )
@@ -125,6 +129,8 @@ def app_with_input_theme() -> JiraApp:
         enable_recent_history=False,
         enable_goto=False,
         search_results_columns=None,
+        stale_work_items_statuses=None,
+        customer_field=None,
         search_results_auto_refresh_interval=None,
         styling=None,
     )
@@ -165,6 +171,8 @@ def app_without_config_theme() -> JiraApp:
         enable_recent_history=False,
         enable_goto=False,
         search_results_columns=None,
+        stale_work_items_statuses=None,
+        customer_field=None,
         search_results_auto_refresh_interval=None,
         styling=None,
     )
@@ -205,6 +213,8 @@ def app() -> JiraApp:
         enable_recent_history=False,
         enable_goto=False,
         search_results_columns=None,
+        stale_work_items_statuses=None,
+        customer_field=None,
         search_results_auto_refresh_interval=None,
         styling=None,
     )
@@ -597,6 +607,8 @@ def config_dict() -> dict:
         'full_text_search_minimum_term_length': 3,
         'search_on_startup': False,
         'show_keybinding_hints': False,
+        'stale_work_items_statuses': None,
+        'customer_field': None,
         'search_results_auto_refresh_interval': None,
         'styling': None,
     }

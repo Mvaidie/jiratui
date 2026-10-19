@@ -1,4 +1,5 @@
 from datetime import date
+import re
 
 from jiratui.models import WorkItemsSearchOrderBy
 
@@ -97,3 +98,20 @@ def build_issue_search_jql(
         else:
             jql = f'order by {order_by.value}'
     return jql
+
+
+def build_jql_field_reference(field: str) -> str:
+    """Builds the reference to a field in a JQL expression.
+
+    Args:
+        field: the name of a field, e.g. `Customer`, or the ID of a custom field, e.g. `customfield_10085`.
+
+    Returns:
+        The reference to the field, e.g. `"Customer"` or `cf[10085]`.
+    """
+
+    cleaned = field.strip()
+    if match := re.fullmatch(r'customfield_(\d+)', cleaned):
+        return f'cf[{match.group(1)}]'
+    escaped = cleaned.replace('"', '\\"')
+    return f'"{escaped}"'

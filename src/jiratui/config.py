@@ -216,6 +216,21 @@ class ApplicationConfiguration(BaseSettings):
     search_results_default_order: WorkItemsSearchOrderBy = WorkItemsSearchOrderBy.CREATED_DESC
     """The default order for search results. Accepts values from [WorkItemsSearchOrderBy](#jiratui.models.WorkItemsSearchOrderBy) enum: `CREATED_ASC`,
     `CREATED_DESC`, `PRIORITY_ASC`, `PRIORITY_DESC`, `KEY_ASC`, `KEY_DESC`, `STATUS_ASC`, `STATUS_DESC`."""
+    stale_work_items_statuses: list[str] | None = [
+        'In Development',
+        'In Review',
+        'In Test',
+        'Blocked',
+        'Resolved',
+    ]
+    """The search results display a red dot before the summary of the work items that are in one of these statuses
+    for more than `stale_work_items_days` days. Set it to an empty list to disable this feature."""
+    stale_work_items_days: int = 7
+    """The number of days after which a work item in one of the statuses of `stale_work_items_statuses` is stale."""
+    customer_field: str | None = 'Customer'
+    """The search results display a blue dot after the type of the work items that have at least one customer, i.e. a
+    value in this field. The field is identified by its name, e.g. `Customer`, or by its ID, e.g. `customfield_10085`.
+    Set it to an empty value to disable this feature."""
     search_results_auto_refresh_interval: int | None = None
     """When set, the search results are refreshed automatically every this number of seconds (minimum 10) from the
     start of the application. The auto-refresh can be enabled/disabled at any time with its key binding; when this
