@@ -1000,6 +1000,11 @@ class AgileBoard(BaseModel):
     name: str
     board_type: AgileBoardTypes
 
+    @property
+    def display_name(self) -> str:
+        """The name of the board followed by its type, e.g. `Team board (Kanban)`."""
+        return f'{self.name} ({self.board_type.value.title()})'
+
 
 @dataclass
 class AgileSprint(BaseModel):

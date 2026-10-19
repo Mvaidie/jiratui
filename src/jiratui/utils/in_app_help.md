@@ -197,8 +197,8 @@ This expects a case-sensitive string. If defined, this has precedence over all t
 
 ### Search by Board
 
-Search work items displayed in a board. This list contains the boards of the selected project and it is only
-enabled when a project is selected. JiraTUI searches the work items that match the filter (i.e. the saved JQL search)
+Search work items displayed in a board. This list contains the boards of the selected project, with their type
+(Scrum, Kanban or Simple), and it is only enabled when a project is selected. JiraTUI searches the work items that match the filter (i.e. the saved JQL search)
 that defines the board.
 
 ### Search by Work Item Type

@@ -786,7 +786,7 @@ class MainScreen(Actionable, Screen):
                 title='Boards',
             )
             return []
-        return [(board.name, board.id) for board in response.result or []]
+        return [(board.display_name, board.id) for board in response.result or []]
 
     async def _search_and_filter_users(self, query: str) -> APIControllerResponse:
         # searches and filters users that can be assignees of work items
