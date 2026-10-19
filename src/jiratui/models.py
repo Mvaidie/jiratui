@@ -439,6 +439,25 @@ class JiraIssue(JiraBaseIssue):
                 return self.assignee.email
         return ''
 
+    def show_priority(self, length: int | None = None) -> str:
+        """Shows the name of the priority of the work item.
+
+        If the name of the priority starts with a code followed by a colon, e.g. `P1: Blocker`, only the code is shown,
+        e.g. `P1`.
+        """
+        if name := self.priority_name:
+            if ':' in name and (code := name.split(':', 1)[0].strip()):
+                name = code
+            if length and len(name) > length:
+                return name[:length] + '...'
+            return name
+        return ''
+
+    def show_work_item_type(self, length: int | None = None) -> str:
+        if (name := self.work_item_type_name) and length and len(name) > length:
+            return name[:length] + '...'
+        return name
+
     def show_reporter(self, length: int | None = None) -> str:
         if self.reporter:
             if self.reporter.display_name:

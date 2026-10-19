@@ -6,6 +6,7 @@ class SearchFieldId(Enum):
 
     ID = 'id'
     KEY = 'key'
+    PRIORITY = 'priority'
     STATUS = 'status'
     ISSUE_TYPE = 'issuetype'
     PARENT = 'parent'
@@ -17,13 +18,16 @@ class SearchFieldId(Enum):
 DEFAULT_WORK_ITEM_SEARCH_FIELDS = [
     SearchFieldId.ID.value,
     SearchFieldId.KEY.value,
-    SearchFieldId.STATUS.value,
     SearchFieldId.ISSUE_TYPE.value,
-    SearchFieldId.PARENT.value,
+    SearchFieldId.PRIORITY.value,
+    SearchFieldId.STATUS.value,
     SearchFieldId.SUMMARY.value,
+    SearchFieldId.ASSIGNEE.value,
 ]
+"""The default fields retrieved when searching work items. The columns of the search results follow this order."""
 
 SUPPORTED_USER_DEFINED_WORK_ITEM_SEARCH_FIELDS = {
+    SearchFieldId.PRIORITY.value,
     SearchFieldId.STATUS.value,
     SearchFieldId.ISSUE_TYPE.value,
     SearchFieldId.PARENT.value,
@@ -35,6 +39,7 @@ SUPPORTED_USER_DEFINED_WORK_ITEM_SEARCH_FIELDS = {
 MAP_WORK_ITEM_SEARCH_FIELD_TO_SEARCH_RESULTS_COLUMNS = {
     SearchFieldId.ID.value: 'Id',
     SearchFieldId.KEY.value: 'Key',
+    SearchFieldId.PRIORITY.value: 'Priority',
     SearchFieldId.STATUS.value: 'Status',
     SearchFieldId.SUMMARY.value: 'Summary',
     SearchFieldId.ISSUE_TYPE.value: 'Type',
@@ -81,7 +86,7 @@ def get_work_item_search_results_table_columns(search_results_columns: list[str]
 
     Returns:
         If `search_results_columns` is empty then the default list of columns is returned. If the list is provided then
-        the columns associated to the field ids on the list will be returned.
+        the columns associated to the field ids on the list will be returned, in the same order.
     """
 
     columns: list[str] = []
