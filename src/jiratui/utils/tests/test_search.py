@@ -8,13 +8,13 @@ def test_get_work_item_search_fields_without_search_results_columns():
     # WHEN
     fields = get_work_item_search_fields([])
     # THEN
-    assert fields == ['id', 'key', 'status', 'issuetype', 'parent', 'summary']
+    assert fields == ['id', 'key', 'issuetype', 'priority', 'status', 'summary', 'assignee']
 
 
 def test_get_work_item_search_fields_with_search_results_columns():
     # WHEN
     fields = get_work_item_search_fields(
-        ['Status', 'a', 'parent ', 'issuetype', 'summary', 'assignee', 'reporter']
+        ['Status', 'a', 'parent ', 'issuetype', 'summary', 'assignee', 'reporter', 'Priority']
     )
     # THEN
     assert fields == [
@@ -26,6 +26,7 @@ def test_get_work_item_search_fields_with_search_results_columns():
         'summary',
         'assignee',
         'reporter',
+        'priority',
     ]
 
 
@@ -33,7 +34,7 @@ def test_get_work_item_search_results_table_columns_without_search_results_colum
     # WHEN
     columns = get_work_item_search_results_table_columns([])
     # THEN
-    assert columns == ['Key', 'Status', 'Type', 'Parent', 'Summary']
+    assert columns == ['Key', 'Type', 'Priority', 'Status', 'Summary', 'Assignee']
 
 
 def test_get_work_item_search_results_table_columns_with_search_results_columns():
