@@ -47,6 +47,7 @@ def app() -> JiraApp:
         enable_goto=False,
         search_results_columns=None,
         search_results_auto_refresh_interval=None,
+        styling=None,
     )
     app = JiraApp(config_mock)
     app.api = APIController(config_mock)

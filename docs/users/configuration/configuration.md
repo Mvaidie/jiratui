@@ -267,7 +267,9 @@ lowercase and w/o spaces.
 ```
 
 ```{important}
-If a type is not defined under `work_item_type_colors` then JiraTUI chooses the value.
+If a type is not defined under `work_item_type_colors` then JiraTUI chooses the value. By default, JiraTUI uses the
+colors of the icons of Jira for the types `bug`, `documentation`, `qa`, `spike`, `story`, `task` and `technical_story`,
+and `yellow` for `epic`.
 ```
 
 - **Work Item Priority**: the color used by the UI to display tasks of a certain priority. For this you can use the
@@ -290,8 +292,12 @@ Colors can be specified using RGB codes (more flexible) or their names. The name
 lowercase and w/o spaces.
 ```
 
+For priorities whose name starts with a code, e.g. `P1: Blocker`, the key can also be the code, e.g. `p1`.
+
 ```{important}
-If a priority is not defined under `work_item_priority_colors` then JiraTUI chooses the value.
+If a priority is not defined under `work_item_priority_colors` then JiraTUI uses a gradient of colors from red, for
+the highest priority, to blue, for the lowest one. The rank of a priority is the number of its code, e.g. `P1`, `P2`,
+..., `P5`, or the rank of the default priorities of Jira: `Highest`, `High`, `Medium`, `Low` and `Lowest`.
 ```
 
 ## Searching Work Items in Active Sprint on Startup

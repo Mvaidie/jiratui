@@ -57,6 +57,7 @@ def config_for_testing() -> ApplicationConfiguration:
         enable_goto=False,
         search_results_columns=None,
         search_results_auto_refresh_interval=None,
+        styling=None,
     )
     return config_mock
 
@@ -92,6 +93,7 @@ def config_for_testing_jira_dc() -> ApplicationConfiguration:
         enable_goto=False,
         search_results_columns=None,
         search_results_auto_refresh_interval=None,
+        styling=None,
     )
     return config_mock
 
@@ -128,6 +130,7 @@ def jira_api_controller() -> APIController:
         enable_goto=False,
         search_results_columns=None,
         search_results_auto_refresh_interval=None,
+        styling=None,
     )
     return APIController(config_mock)
 
@@ -164,6 +167,7 @@ def jira_api_controller_for_jira_dc() -> APIController:
         enable_goto=False,
         search_results_columns=None,
         search_results_auto_refresh_interval=None,
+        styling=None,
     )
     return APIController(config_mock)
 

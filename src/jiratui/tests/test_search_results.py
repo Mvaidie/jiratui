@@ -4,12 +4,20 @@ from unittest.mock import ANY, AsyncMock, MagicMock, Mock, PropertyMock, call, p
 from pydantic import SecretStr
 import pytest
 from rich.text import Text
+from textual.coordinate import Coordinate
 from textual.geometry import Size
 
 from jiratui.api_controller.controller import APIController, APIControllerResponse
 from jiratui.app import JiraApp
 from jiratui.config import ApplicationConfiguration
-from jiratui.models import JiraIssue, JiraIssueSearchResponse, WorkItemsSearchOrderBy
+from jiratui.models import (
+    IssuePriority,
+    IssueStatus,
+    IssueType,
+    JiraIssue,
+    JiraIssueSearchResponse,
+    WorkItemsSearchOrderBy,
+)
 from jiratui.widgets.screen import MainScreen, WorkItemSearchResult
 from jiratui.widgets.screens.goto import GoToScreen
 from jiratui.widgets.screens.work_item_quick_view import WorkItemQuickViewScreen
@@ -52,6 +60,7 @@ def app() -> JiraApp:
         enable_goto=False,
         search_results_columns=None,
         search_results_auto_refresh_interval=None,
+        styling=None,
     )
     app = JiraApp(config_mock)
     app.api = APIController(config_mock)
@@ -988,3 +997,42 @@ async def test_search_results_table_summary_uses_the_width_left_by_other_columns
         # THEN
         # columns: '#' (1 + 2), 'Key' (5 + 2), 'Status' (6 + 2); summary padding (2) and the scrollbar (1)
         assert width == expected_width
+
+
+@patch('jiratui.widgets.search.get_style_for_work_item_priority')
+@patch('jiratui.widgets.screen.MainScreen.search_issues')
+@patch('jiratui.widgets.screen.MainScreen.fetch_statuses')
+@patch('jiratui.widgets.screen.MainScreen.fetch_issue_types')
+@patch('jiratui.widgets.screen.MainScreen.fetch_projects')
+@pytest.mark.asyncio
+async def test_search_results_table_priority_column_uses_the_color_of_the_priority(
+    search_projects_mock: AsyncMock,
+    fetch_issue_types_mock: AsyncMock,
+    fetch_statuses_mock: AsyncMock,
+    search_issues_mock: AsyncMock,
+    get_style_for_work_item_priority_mock: Mock,
+    app,
+):
+    # GIVEN
+    get_style_for_work_item_priority_mock.return_value = '#F25555'
+    app.config.search_results_truncate_work_item_summary = 0
+    app.config.search_results_style_work_item_status = False
+    app.config.search_results_style_work_item_type = False
+    issue = JiraIssue(
+        id='1',
+        key='WI-1',
+        summary='summary',
+        status=IssueStatus(id='1', name='To Do'),
+        issue_type=IssueType(id='1', name='Bug'),
+        priority=IssuePriority(id='1', name='P1: Blocker / No workaround'),
+    )
+    async with app.run_test():
+        main_screen = cast('MainScreen', app.screen)  # type:ignore[name-defined] # noqa: F821
+        table = main_screen.search_results_table
+        # WHEN
+        table.search_results = JiraIssueSearchResponse(issues=[issue])
+        # THEN
+        cell = table.get_cell_at(Coordinate(0, 3))
+        assert str(cell) == 'P1'
+        assert str(cell.style) == '#F25555'
+        get_style_for_work_item_priority_mock.assert_called_once_with('P1: Blocker / No workaround')
