@@ -215,7 +215,7 @@ class ApplicationConfiguration(BaseSettings):
     """SSL configuration for client-side certificates and CA bundle."""
     search_results_default_order: WorkItemsSearchOrderBy = WorkItemsSearchOrderBy.CREATED_DESC
     """The default order for search results. Accepts values from [WorkItemsSearchOrderBy](#jiratui.models.WorkItemsSearchOrderBy) enum: `CREATED_ASC`,
-    `CREATED_DESC`, `PRIORITY_ASC`, `PRIORITY_DESC`, `KEY_ASC`, `KEY_DESC`."""
+    `CREATED_DESC`, `PRIORITY_ASC`, `PRIORITY_DESC`, `KEY_ASC`, `KEY_DESC`, `STATUS_ASC`, `STATUS_DESC`."""
     search_results_columns: list[str] | None = None
     """The columns you want to see in the search results.
     The columns supported are: `status`, `issuetype`, `parent`, `assignee`, `reporter`, `summary`. If none is provided

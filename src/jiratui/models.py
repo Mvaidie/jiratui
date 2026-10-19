@@ -82,6 +82,10 @@ class WorkItemsSearchOrderBy(enum.Enum):
     """Sort the work items by key in ascending order."""
     KEY_DESC = 'key desc'
     """Sort the work items by key in descending order."""
+    STATUS_ASC = 'status asc'
+    """Sort the work items by status in ascending order."""
+    STATUS_DESC = 'status desc'
+    """Sort the work items by status in descending order."""
 
     @classmethod
     def to_choices(cls):
