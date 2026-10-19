@@ -47,6 +47,8 @@ def app_with_unrecognized_config_theme() -> JiraApp:
         search_results_columns=None,
         stale_work_items_statuses=None,
         customer_field=None,
+        customer_ticket_id_field=None,
+        customer_ticket_link_field=None,
         search_results_auto_refresh_interval=None,
         styling=None,
     )
@@ -89,6 +91,8 @@ def app_with_input_and_config_theme() -> JiraApp:
         search_results_columns=None,
         stale_work_items_statuses=None,
         customer_field=None,
+        customer_ticket_id_field=None,
+        customer_ticket_link_field=None,
         search_results_auto_refresh_interval=None,
         styling=None,
     )
@@ -131,6 +135,8 @@ def app_with_input_theme() -> JiraApp:
         search_results_columns=None,
         stale_work_items_statuses=None,
         customer_field=None,
+        customer_ticket_id_field=None,
+        customer_ticket_link_field=None,
         search_results_auto_refresh_interval=None,
         styling=None,
     )
@@ -173,6 +179,8 @@ def app_without_config_theme() -> JiraApp:
         search_results_columns=None,
         stale_work_items_statuses=None,
         customer_field=None,
+        customer_ticket_id_field=None,
+        customer_ticket_link_field=None,
         search_results_auto_refresh_interval=None,
         styling=None,
     )
@@ -215,6 +223,8 @@ def app() -> JiraApp:
         search_results_columns=None,
         stale_work_items_statuses=None,
         customer_field=None,
+        customer_ticket_id_field=None,
+        customer_ticket_link_field=None,
         search_results_auto_refresh_interval=None,
         styling=None,
     )
@@ -609,6 +619,8 @@ def config_dict() -> dict:
         'show_keybinding_hints': False,
         'stale_work_items_statuses': None,
         'customer_field': None,
+        'customer_ticket_id_field': None,
+        'customer_ticket_link_field': None,
         'search_results_auto_refresh_interval': None,
         'styling': None,
     }

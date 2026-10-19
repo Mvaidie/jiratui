@@ -1586,6 +1586,7 @@ async def test_search_issues_with_custom_search_fields(
         limit=None,
         order_by=None,
         filter_id=None,
+        field_with_value=None,
     )
 
 
@@ -1679,6 +1680,7 @@ async def test_search_issues(
         limit=None,
         order_by=None,
         filter_id=None,
+        field_with_value=None,
     )
 
 
@@ -1796,6 +1798,7 @@ async def test_search_issues_for_jira_dc(
         limit=None,
         order_by=None,
         filter_id=None,
+        field_with_value=None,
     )
 
 
@@ -1872,6 +1875,7 @@ async def test_count_issues_with_criteria(
         issue_type=None,
         jql_query='query',
         filter_id=None,
+        field_with_value=None,
     )
 
 
@@ -5812,3 +5816,58 @@ async def test_find_work_items_with_customers(
     search_issues_mock.assert_awaited_once_with(
         jql_query=f'key in ("WI-1", "WI-2") AND {expected_condition}', fields=['key'], limit=2
     )
+
+
+@pytest.mark.asyncio
+@patch.object(JiraAPI, 'get_fields')
+async def test_get_field_ids(get_fields_mock: AsyncMock, jira_api_controller: APIController):
+    # GIVEN
+    get_fields_mock.return_value = [
+        {'id': 'customfield_10085', 'key': 'customfield_10085', 'name': 'Customer'},
+        {'id': 'customfield_10087', 'key': 'customfield_10087', 'name': 'Customer ticket ID'},
+        {'id': 'customfield_99999', 'key': 'customfield_99999', 'name': 'customer'},
+    ]
+    # WHEN
+    first_result = await jira_api_controller.get_field_ids(
+        ['Customer', ' customer ticket id ', 'customfield_10069', 'Unknown']
+    )
+    second_result = await jira_api_controller.get_field_ids(['Customer'])
+    # THEN
+    assert first_result == APIControllerResponse(
+        result={
+            'Customer': 'customfield_10085',  # the first field with the name
+            ' customer ticket id ': 'customfield_10087',
+            'customfield_10069': 'customfield_10069',
+            'Unknown': None,
+        }
+    )
+    assert second_result == APIControllerResponse(result={'Customer': 'customfield_10085'})
+    # the fields are cached
+    get_fields_mock.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+@patch.object(JiraAPI, 'get_fields')
+async def test_get_field_ids_raises_exception(
+    get_fields_mock: AsyncMock, jira_api_controller: APIController
+):
+    # GIVEN
+    get_fields_mock.side_effect = ValueError('test error')
+    # WHEN
+    result = await jira_api_controller.get_field_ids(['Customer'])
+    # THEN
+    assert result == APIControllerResponse(success=False, error='test error')
+
+
+@pytest.mark.asyncio
+@patch.object(JiraAPI, 'search_issues')
+async def test_search_issues_with_customers(
+    search_issues_mock: AsyncMock, jira_api_controller: APIController
+):
+    # GIVEN
+    search_issues_mock.return_value = {'issues': []}
+    # WHEN
+    response = await jira_api_controller.search_issues(project_key='P1', customer_field='Customer')
+    # THEN
+    assert response.success is True
+    assert search_issues_mock.call_args.kwargs['field_with_value'] == 'Customer'

@@ -34,6 +34,7 @@ def build_issue_search_jql(
     search_in_active_sprint: bool = False,
     order_by: WorkItemsSearchOrderBy | None = None,
     filter_id: str | None = None,
+    field_with_value: str | None = None,
 ) -> str:
     """Builds a JQL query expression to search issues based on different criteria.
 
@@ -54,6 +55,8 @@ def build_issue_search_jql(
         to be placed at the end of the JQL query, otherwise the JQL will be invalid.
         filter_id: find work items that match the filter (i.e. saved JQL search) with this ID. This is used, for
         example, to search the work items of a board.
+        field_with_value: find work items that have a value in this field, identified by its name or by its ID. This is
+        used, for example, to search the work items that have customers.
 
     Returns:
         A string with the JQL query.
@@ -63,6 +66,8 @@ def build_issue_search_jql(
         fields.append(f'project = "{project_key}"')
     if filter_id:
         fields.append(f'filter = {filter_id}')
+    if field_with_value and field_with_value.strip():
+        fields.append(f'{build_jql_field_reference(field_with_value)} is not EMPTY')
     if created_from:
         value = date.strftime(created_from, '%Y-%m-%d')
         fields.append(f'created >= "{value}"')

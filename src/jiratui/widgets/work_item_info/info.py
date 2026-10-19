@@ -14,6 +14,7 @@ from textual.widgets import (
     LoadingIndicator,
     Rule,
     Static,
+    TabPane,
 )
 
 from jiratui.api_controller.controller import APIControllerResponse
@@ -30,6 +31,11 @@ from jiratui.widgets.commons.widgets import (
     ReadOnlyPlainTextTextAreaWidget,
     WebLinksCollapsible,
     WebLinksDataTable,
+)
+from jiratui.widgets.work_item_customers.customers import (
+    WorkItemCustomers,
+    WorkItemCustomersWidget,
+    get_work_item_customers,
 )
 from jiratui.widgets.work_item_info.screens import DisplayTextContentScreen, EditTextContentScreen
 from jiratui.widgets.work_item_info.tabs import InfoTabbedContent, TextAreaTabPane
@@ -264,6 +270,32 @@ class WorkItemInfoContainer(Vertical):
                     await pane.mount(WebLinksCollapsible(WebLinksDataTable(web_links)))
                 await pane.mount(widget)
 
+    async def _setup_work_item_customers(self, work_item: JiraIssue) -> None:
+        """Sets up the pane that displays the information about the customers of the work item.
+
+        The pane is only displayed when at least one of the settings `customer_field`, `customer_ticket_id_field` and
+        `customer_ticket_link_field` is set.
+
+        Args:
+          work_item: the work item whose customers we want to display.
+
+        Returns:
+          None
+        """
+
+        customers: WorkItemCustomers | None = await get_work_item_customers(
+            work_item,
+            self.app.api,  # type:ignore[attr-defined]
+            self.app.config,  # type:ignore[attr-defined]
+        )
+        if customers is None:
+            return
+        pane = TabPane('Customer', id='pane-customers')
+        await self.info_tabbed_content.add_pane(pane)
+        widget = WorkItemCustomersWidget()
+        await pane.mount(widget)
+        widget.customers = customers
+
     async def _refresh_tabs_and_set_work_item(self, work_item: JiraIssue | None):
         """Updates the content of the Info tab, i.e. its TextAreaTabPane widgets and the summary widget.
 
@@ -310,6 +342,9 @@ class WorkItemInfoContainer(Vertical):
 
             # set the description
             await self._setup_work_item_description(work_item)
+
+            # set the information about the customers, right after the description
+            await self._setup_work_item_customers(work_item)
 
             # build widgets for the fields with rich-text support
             if self._enable_updating_additional_fields:
