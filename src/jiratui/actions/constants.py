@@ -39,6 +39,7 @@ class SupportedActions(Enum):
     FLAG_WORK_ITEM = 'flag_work_item'
     FOCUS_PROJECT_FILTER = 'focus_project_filter'
     FOCUS_SEARCH_ASSIGNEE_FILTER = 'focus_search_assignee_filter'
+    FOCUS_SEARCH_BOARD_FILTER = 'focus_search_board_filter'
     FOCUS_SEARCH_CREATED_FROM_FILTER = 'focus_search_created_from_filter'
     FOCUS_SEARCH_CREATED_UNTIL_FILTER = 'focus_search_created_until_filter'
     FOCUS_SEARCH_JQL = 'focus_search_jql'
@@ -111,6 +112,12 @@ KEY_BINDINGS_LEGACY = {
         'show': False,
         'description': 'Focuses the project dropdown',
         'tooltip': 'Focuses the project dropdown',
+    },
+    SupportedActions.FOCUS_SEARCH_BOARD_FILTER.value: {
+        'keys': ['b'],
+        'show': False,
+        'description': 'Focuses the boards dropdown',
+        'tooltip': 'Focuses the boards dropdown',
     },
     SupportedActions.FOCUS_SEARCH_WORK_ITEM_TYPE_FILTER.value: {
         'keys': ['t'],
@@ -570,6 +577,12 @@ KEY_BINDINGS_STANDARD = {
         'show': False,
         'description': 'Focuses the project dropdown',
         'tooltip': 'Focuses the project dropdown',
+    },
+    SupportedActions.FOCUS_SEARCH_BOARD_FILTER.value: {
+        'keys': ['alt+b'],
+        'show': False,
+        'description': 'Focuses the boards dropdown',
+        'tooltip': 'Focuses the boards dropdown',
     },
     SupportedActions.FOCUS_SEARCH_WORK_ITEM_TYPE_FILTER.value: {
         'keys': ['alt+t'],

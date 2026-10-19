@@ -36,6 +36,7 @@ from jiratui.widgets.commons.widgets import ActionableTabbedContent
 from jiratui.widgets.create_work_item.screen import AddWorkItemScreen
 from jiratui.widgets.filters import (
     ActiveSprintCheckbox,
+    BoardSelectionInput,
     IssueSearchCreatedFromWidget,
     IssueSearchCreatedUntilWidget,
     IssueStatusSelectionInput,
@@ -89,6 +90,7 @@ class MainScreen(Actionable, Screen):
     - handling the logic for creating a local Git branch for the currently selected work item
     - searching Jira users for the assignee input filter
     - searching projects for the project input
+    - searching the boards of the selected project for the board input filter
     - searching types of issues for the issue type input filter
     - composing the widgets in the UI
 
@@ -107,6 +109,7 @@ class MainScreen(Actionable, Screen):
     key_bindings: dict[str, dict] = get_application_key_bindings()
     for supported_action_id in [
         SupportedActions.FOCUS_PROJECT_FILTER,
+        SupportedActions.FOCUS_SEARCH_BOARD_FILTER,
         SupportedActions.FOCUS_SEARCH_WORK_ITEM_TYPE_FILTER,
         SupportedActions.FOCUS_SEARCH_WORK_ITEM_STATUS_FILTER,
         SupportedActions.FOCUS_SEARCH_ASSIGNEE_FILTER,
@@ -202,6 +205,10 @@ class MainScreen(Actionable, Screen):
     @property
     def project_selector(self) -> ProjectSelectionInput:
         return self.query_one(ProjectSelectionInput)
+
+    @property
+    def board_selector(self) -> BoardSelectionInput:
+        return self.query_one(BoardSelectionInput)
 
     @property
     def issue_status_selector(self) -> IssueStatusSelectionInput:
@@ -315,6 +322,14 @@ class MainScreen(Actionable, Screen):
                     projects=[],
                     border_subtitle=(
                         f'{self.current_key_bindings.get(SupportedActions.FOCUS_PROJECT_FILTER.value, {}).get("keys", [])[0]}'
+                        if self.config.show_keybinding_hints
+                        else None
+                    ),
+                )
+                yield BoardSelectionInput(
+                    boards=[],
+                    border_subtitle=(
+                        f'{self.current_key_bindings.get(SupportedActions.FOCUS_SEARCH_BOARD_FILTER.value, {}).get("keys", [])[0]}'
                         if self.config.show_keybinding_hints
                         else None
                     ),
@@ -704,6 +719,28 @@ class MainScreen(Actionable, Screen):
             work_item_types.append((name, item.id))
         return work_item_types
 
+    async def fetch_boards(self) -> list[tuple[str, int]]:
+        """Retrieves the boards of the selected project.
+
+        Returns:
+            A list of tuples with the name and id of every board of the selected project or, an empty list if no
+            project is selected.
+        """
+
+        if not self.project_selector.selection:
+            return []
+        response: APIControllerResponse = await self.api.get_project_boards(
+            self.project_selector.selection
+        )
+        if not response.success:
+            self.notify(
+                f'Failed to fetch the boards of the project: {response.error}',
+                severity='warning',
+                title='Boards',
+            )
+            return []
+        return [(board.name, board.id) for board in response.result or []]
+
     async def _search_and_filter_users(self, query: str) -> APIControllerResponse:
         # searches and filters users that can be assignees of work items
         if self.project_selector.selection:
@@ -718,13 +755,15 @@ class MainScreen(Actionable, Screen):
             self.issue_status_selector.statuses = self.available_issues_status
         elif event.worker.name == 'fetch_issue_types':
             self.issue_type_selector.set_options(event.worker.result or [])
+        elif event.worker.name == 'fetch_boards':
+            self.board_selector.boards = event.worker.result or []
 
     @on(Select.Changed, '#jira-project-selector')
     async def handle_project_selection(self, event: Select.Changed) -> None:
         """Handles the selection of a project.
 
-        This will trigger the actions to fetch the types of issues and applicable project status codes. It will also
-        update the project key of the autocomplete widget used for searching Jira users.
+        This will trigger the actions to fetch the types of issues, the applicable project status codes and the boards
+        of the project. It will also update the project key of the autocomplete widget used for searching Jira users.
 
         Args:
             event: the event triggered by the selection.
@@ -737,6 +776,9 @@ class MainScreen(Actionable, Screen):
         self.run_worker(self.fetch_issue_types())
         # fetch valid status codes
         self.run_worker(self.fetch_statuses())
+        # fetch the boards of the project; cancel any previous fetch so the boards of a previously selected project do
+        # not override the boards of the current one
+        self.run_worker(self.fetch_boards(), group='fetch_boards', exclusive=True)
 
     async def _search_work_items(
         self,
@@ -783,6 +825,10 @@ class MainScreen(Actionable, Screen):
         if value := self.project_selector.selection:
             project_key = value
 
+        board_id: int | None = None
+        if value := self.board_selector.selection:
+            board_id = int(value)
+
         order_by = (
             WorkItemsSearchOrderBy(self.order_by_widget.selection)
             if self.order_by_widget.selection
@@ -814,6 +860,7 @@ class MainScreen(Actionable, Screen):
                 fields=get_work_item_search_fields(
                     self.app.config.search_results_columns  # type:ignore[attr-defined]
                 ),
+                board_id=board_id,
             )
         else:
             response = await self.api.search_issues_by_page_number(
@@ -831,6 +878,7 @@ class MainScreen(Actionable, Screen):
                 fields=get_work_item_search_fields(
                     self.app.config.search_results_columns  # type:ignore[attr-defined]
                 ),
+                board_id=board_id,
             )
 
         if not response.success or response.result is None:
@@ -856,6 +904,7 @@ class MainScreen(Actionable, Screen):
                 assignee=search_field_assignee,
                 issue_type=search_field_issue_type,
                 jql_query=jql_query,
+                board_id=board_id,
             )
             if counting.success:
                 estimated_total_issues = counting.result
@@ -1010,6 +1059,9 @@ class MainScreen(Actionable, Screen):
 
     async def action_focus_project_filter(self) -> None:
         self.set_focus(self.project_selector)
+
+    async def action_focus_search_board_filter(self) -> None:
+        self.set_focus(self.board_selector)
 
     async def action_focus_search_work_item_type_filter(self) -> None:
         self.set_focus(self.issue_type_selector)

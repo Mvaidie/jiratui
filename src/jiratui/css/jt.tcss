@@ -56,6 +56,10 @@
 
 /* Search Filters */
 
+#jira-board-selector {
+    width: 20%;
+}
+
 #jira-issue-types-selector {
     width: 20%;
 }

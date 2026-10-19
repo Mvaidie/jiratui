@@ -28,6 +28,7 @@ context.
 | `f5`         | View items related to the currently selected work item | Main Screen                                                             |
 | `f6`         | Creates a Git branch for a work item                   | Main Screen                                                             |
 | `alt+p`      | Focuses the project dropdown                           | Main Screen                                                             |
+| `alt+b`      | Focuses the boards dropdown                            | Main Screen                                                             |
 | `alt+t`      | Focuses the work item types dropdown                   | Main Screen                                                             |
 | `alt+s`      | Focuses the work item statuses dropdown                | Main Screen                                                             |
 | `alt+a`      | Focuses the assignee dropdown                          | Main Screen                                                             |
@@ -105,6 +106,7 @@ context.
 | `f2`                    | View details of your Jira server                         |         |
 | `f3`                    | View the configuration file                              |         |
 | `p`                     | Focuses the project dropdown                             |         |
+| `b`                     | Focuses the boards dropdown                              |         |
 | `t`                     | Focuses the work item types dropdown                     |         |
 | `s`                     | Focuses the work item statuses dropdown                  |         |
 | `a`                     | Focuses the assignee dropdown                            |         |
@@ -190,6 +192,12 @@ in the Work Items pane on the left.
 ### Search by Work Item Key
 
 This expects a case-sensitive string. If defined, this has precedence over all the other search criteria.
+
+### Search by Board
+
+Search work items displayed in a board. This list contains the boards of the selected project and it is only
+enabled when a project is selected. JiraTUI searches the work items that match the filter (i.e. the saved JQL search)
+that defines the board.
 
 ### Search by Work Item Type
 
