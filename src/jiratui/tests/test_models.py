@@ -1,6 +1,13 @@
 import pytest
 
-from jiratui.models import IssueStatus, IssueType, JiraIssue, JiraUser, RelatedJiraIssue
+from jiratui.models import (
+    IssueStatus,
+    IssueType,
+    JiraIssue,
+    JiraUser,
+    RelatedJiraIssue,
+    WorkItemsSearchOrderBy,
+)
 
 
 def _jira_issue(summary: str) -> JiraIssue:
@@ -234,3 +241,11 @@ def test_jira_issue_show_reporter_no_name_with_smaller_length():
     )
     # THEN
     assert issue.show_reporter(30) == 'bart@simpson.com'
+
+
+def test_work_items_search_order_by_choices_include_status():
+    # WHEN
+    choices = WorkItemsSearchOrderBy.to_choices()
+    # THEN
+    assert ('Status Asc', 'status asc') in choices
+    assert ('Status Desc', 'status desc') in choices

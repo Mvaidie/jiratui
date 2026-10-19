@@ -1,5 +1,7 @@
 from datetime import datetime
 
+import pytest
+
 from jiratui.api.utils import build_issue_search_jql, parse_required_fields_from_meta
 from jiratui.models import WorkItemsSearchOrderBy
 
@@ -60,6 +62,20 @@ def test_build_issue_search_jql_without_parameters_and_jql_query_with_order():
     result = build_issue_search_jql(jql_query='q=5', order_by=WorkItemsSearchOrderBy.KEY_ASC)
     # THEN
     assert result == ('q=5 order by key asc')
+
+
+@pytest.mark.parametrize(
+    'order_by, expected',
+    [
+        (WorkItemsSearchOrderBy.STATUS_ASC, 'project = "P1" order by status asc'),
+        (WorkItemsSearchOrderBy.STATUS_DESC, 'project = "P1" order by status desc'),
+    ],
+)
+def test_build_issue_search_jql_order_by_status(order_by: WorkItemsSearchOrderBy, expected: str):
+    # WHEN
+    result = build_issue_search_jql(project_key='P1', order_by=order_by)
+    # THEN
+    assert result == expected
 
 
 def test_build_issue_search_jql_with_parameters_and_jql_query_with_order():
