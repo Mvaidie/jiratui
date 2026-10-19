@@ -39,6 +39,8 @@ from jiratui.exceptions import (
     ValidationError,
 )
 from jiratui.models import (
+    AgileBoard,
+    AgileBoardTypes,
     AgileSprint,
     AgileSprintState,
     Attachment,
@@ -133,6 +135,7 @@ class APIController:
         self.logger = JiraTUILogger(logging.getLogger(LOGGER_NAME), self.config.enable_logging)
         self._required_fields_cache: dict[str, list[str]] = {}
         self._teams_cache: dict[str, list[tuple[str, str]]] = {}
+        self._board_filter_ids_cache: dict[int, str] = {}
 
     def _adf_support_enabled(self) -> bool:
         return self.config.cloud and self.config.jira_api_version == 3
@@ -246,6 +249,97 @@ class APIController:
                     extra={'boards': list(boards_by_id.keys()), 'project': key},
                 )
         return APIControllerResponse(result=sprints)
+
+    async def get_project_boards(self, key: str) -> APIControllerResponse:
+        """Retrieves the boards of a project/space.
+
+        This uses the [Jira Software Cloud REST API](https://developer.atlassian.com/cloud/jira/software/rest/intro/).
+
+        Args:
+            key: the key or Id of a project/space in Jira.
+
+        Returns:
+            An instance of APIControllerResponse with the list of AgileBoard in the project sorted by name. If an error
+            occurs then it returns an instance of APIControllerResponse with success == False an error message.
+        """
+
+        boards: list[AgileBoard] = []
+        offset = 0
+        while True:
+            try:
+                response: dict = await self.jira_software_cloud_api.get_boards(
+                    project_key_or_id=key, offset=offset
+                )
+            except Exception as e:
+                exception_details: dict = self._extract_exception_details(e)
+                self.logger.error(
+                    'Unable to retrieve the boards of the project',
+                    extra={
+                        'project_key': key,
+                        **exception_details.get('extra', {}),
+                    },
+                )
+                return APIControllerResponse(success=False, error=exception_details.get('message'))
+
+            values: list[dict] = (response or {}).get('values', []) or []
+            for board in values:
+                try:
+                    boards.append(
+                        AgileBoard(
+                            id=int(board.get('id')),
+                            name=board.get('name'),
+                            board_type=AgileBoardTypes(board.get('type')),
+                        )
+                    )
+                except Exception:
+                    self.logger.warning(
+                        'Unable to process the details of a board', extra={'board': board}
+                    )
+            if not values or response.get('isLast', True):
+                break
+            offset += len(values)
+
+        boards.sort(key=lambda board: board.name.lower())
+        return APIControllerResponse(result=boards)
+
+    async def get_board_filter_id(self, board_id: int) -> APIControllerResponse:
+        """Retrieves the ID of the filter (i.e. saved JQL search) that defines the work items of a board.
+
+        The ID of the filter of every board is cached because it is needed every time the user searches work items by
+        board.
+
+        Args:
+            board_id: the ID of the board.
+
+        Returns:
+            An instance of APIControllerResponse with the ID of the board's filter. If an error occurs then it returns
+            an instance of APIControllerResponse with success == False an error message.
+        """
+
+        if (cached := self._board_filter_ids_cache.get(board_id)) is not None:
+            return APIControllerResponse(result=cached)
+        try:
+            response: dict = await self.jira_software_cloud_api.get_board_configuration(board_id)
+        except Exception as e:
+            exception_details: dict = self._extract_exception_details(e)
+            self.logger.error(
+                'Unable to retrieve the configuration of the board',
+                extra={'board_id': board_id, **exception_details.get('extra', {})},
+            )
+            return APIControllerResponse(success=False, error=exception_details.get('message'))
+
+        if not (filter_id := ((response or {}).get('filter') or {}).get('id')):
+            return APIControllerResponse(
+                success=False, error=f'Unable to find the filter of the board {board_id}'
+            )
+        self._board_filter_ids_cache[board_id] = str(filter_id)
+        return APIControllerResponse(result=str(filter_id))
+
+    async def _get_optional_board_filter_id(self, board_id: int | None) -> APIControllerResponse:
+        # the result is None when no board is selected
+        if not board_id:
+            return APIControllerResponse(result=None)
+        return await self.get_board_filter_id(board_id)
 
     async def get_project(self, key: str) -> APIControllerResponse:
         """Retrieves the details of a project by key.
@@ -1021,12 +1115,13 @@ class APIController:
         assignee: str | None = None,
         issue_type: int | None = None,
         jql_query: str | None = None,
+        board_id: int | None = None,
     ) -> dict:
         if jql_query:
             return {'jql': jql_query.strip(), 'updated_from': None}
 
         criteria_defined = any(
-            [project_key, created_from, created_until, status, assignee, issue_type]
+            [project_key, created_from, created_until, status, assignee, issue_type, board_id]
         )
         if criteria_defined:
             return {}
@@ -1064,6 +1159,7 @@ class APIController:
         limit: int | None = None,
         order_by: WorkItemsSearchOrderBy | None = None,
         fields: list[str] | None = None,
+        board_id: int | None = None,
     ) -> APIControllerResponse:
         """Searches for issues matching specified JQL query and other criteria.
 
@@ -1083,6 +1179,7 @@ class APIController:
             order_by: an instance of `WorkItemsSearchOrderBy` to sort the results.
             fields: the fields to retrieve for every work item. It defaults to: `'id', 'key', 'status', 'summary',
             'issuetype'`
+            board_id: search work items displayed in the board with this ID, i.e. that match the board's filter.
 
         Returns:
             An instance of `APIControllerResponse` with the work items found or, en error if the search can not be
@@ -1096,7 +1193,11 @@ class APIController:
             assignee=assignee,
             issue_type=issue_type,
             jql_query=jql_query,
+            board_id=board_id,
         )
+        board_filter_response = await self._get_optional_board_filter_id(board_id)
+        if not board_filter_response.success:
+            return board_filter_response
         try:
             response: dict = await self.api.search_issues(
                 project_key=project_key,
@@ -1112,6 +1213,7 @@ class APIController:
                 next_page_token=next_page_token,
                 limit=limit,
                 order_by=order_by,
+                filter_id=board_filter_response.result,
             )
         except ServiceUnavailableException:
             return APIControllerResponse(
@@ -1157,6 +1259,7 @@ class APIController:
         limit: int | None = None,
         order_by: WorkItemsSearchOrderBy | None = None,
         fields: list[str] | None = None,
+        board_id: int | None = None,
     ) -> APIControllerResponse:
         """Searches for issues matching specified JQL query and other criteria.
 
@@ -1180,6 +1283,7 @@ class APIController:
             order_by: an instance of `WorkItemsSearchOrderBy` to sort the results.
             fields: the fields to retrieve for every work item. It defaults to: `'id', 'key', 'status', 'summary',
             'issuetype'`
+            board_id: search work items displayed in the board with this ID, i.e. that match the board's filter.
 
         Returns:
             An instance of `APIControllerResponse` with the work items found or, en error if the search can not be
@@ -1194,7 +1298,11 @@ class APIController:
             assignee=assignee,
             issue_type=issue_type,
             jql_query=jql_query,
+            board_id=board_id,
         )
+        board_filter_response = await self._get_optional_board_filter_id(board_id)
+        if not board_filter_response.success:
+            return board_filter_response
 
         if page is None or page <= 0:
             offset = 0
@@ -1216,6 +1324,7 @@ class APIController:
                 offset=offset,
                 limit=limit,
                 order_by=order_by,
+                filter_id=board_filter_response.result,
             )
         except ServiceUnavailableException as e:
             exception_details: dict = self._extract_exception_details(e)
@@ -1265,6 +1374,7 @@ class APIController:
         assignee: str | None = None,
         issue_type: int | None = None,
         jql_query: str | None = None,
+        board_id: int | None = None,
     ) -> APIControllerResponse:
         """Estimates the number of work items yield by a search.
 
@@ -1276,6 +1386,7 @@ class APIController:
             assignee: search work items assigned to this user's account ID.
             issue_type: search work items of this type.
             jql_query: search work items using this (additional) JQL query.
+            board_id: search work items displayed in the board with this ID, i.e. that match the board's filter.
 
         Returns:
             An instance of `APIControllerResponse` with the count of work items or, en error if the estimation can not
@@ -1290,7 +1401,11 @@ class APIController:
             assignee=assignee,
             issue_type=issue_type,
             jql_query=jql_query,
+            board_id=board_id,
         )
+        board_filter_response = await self._get_optional_board_filter_id(board_id)
+        if not board_filter_response.success:
+            return board_filter_response
 
         try:
             response: dict = await self.api.work_items_search_approximate_count(
@@ -1302,6 +1417,7 @@ class APIController:
                 assignee=assignee,
                 issue_type=issue_type,
                 jql_query=criteria.get('jql'),
+                filter_id=board_filter_response.result,
             )
         except NotImplementedError:
             return APIControllerResponse(result=0)

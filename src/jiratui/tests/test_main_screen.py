@@ -9,6 +9,8 @@ from jiratui.api_controller.controller import APIController, APIControllerRespon
 from jiratui.app import JiraApp
 from jiratui.config import ApplicationConfiguration
 from jiratui.models import (
+    AgileBoard,
+    AgileBoardTypes,
     IssueStatus,
     IssueType,
     JiraBaseIssue,
@@ -24,6 +26,7 @@ from jiratui.widgets.commons.users import JiraUserInput
 from jiratui.widgets.create_work_item.screen import AddWorkItemScreen
 from jiratui.widgets.filters import (
     ActiveSprintCheckbox,
+    BoardSelectionInput,
     IssueSearchCreatedFromWidget,
     IssueSearchCreatedUntilWidget,
     IssueStatusSelectionInput,
@@ -1554,3 +1557,87 @@ async def test_handle_search_work_item_message_without_work_item_key(
         await pilot.pause()
         # THEN
         load_work_item_mock.assert_not_called()
+
+
+@patch('jiratui.widgets.screen.MainScreen.fetch_statuses')
+@patch('jiratui.widgets.screen.MainScreen.fetch_issue_types')
+@patch('jiratui.widgets.screen.MainScreen.fetch_projects')
+@pytest.mark.asyncio
+async def test_board_selector_is_disabled_without_project(
+    fetch_projects_mock: AsyncMock,
+    fetch_issue_types_mock: AsyncMock,
+    fetch_statuses_mock: AsyncMock,
+    app,
+):
+    async with app.run_test():
+        main_screen = cast('MainScreen', app.screen)  # type:ignore[name-defined] # noqa: F821
+        # THEN
+        assert main_screen.board_selector.disabled is True
+        assert main_screen.board_selector.selection is None
+
+
+@patch.object(APIController, 'get_project_boards')
+@patch('jiratui.widgets.screen.MainScreen.fetch_statuses')
+@patch('jiratui.widgets.screen.MainScreen.fetch_issue_types')
+@patch('jiratui.widgets.screen.MainScreen.fetch_projects')
+@pytest.mark.asyncio
+async def test_selecting_a_project_fetches_its_boards(
+    fetch_projects_mock: AsyncMock,
+    fetch_issue_types_mock: AsyncMock,
+    fetch_statuses_mock: AsyncMock,
+    get_project_boards_mock: AsyncMock,
+    app,
+):
+    # GIVEN
+    get_project_boards_mock.return_value = APIControllerResponse(
+        result=[AgileBoard(id=84, name='scrum board', board_type=AgileBoardTypes.SCRUM)]
+    )
+    async with app.run_test() as pilot:
+        main_screen = cast('MainScreen', app.screen)  # type:ignore[name-defined] # noqa: F821
+        # WHEN
+        main_screen.project_selector.projects = {
+            'projects': [Project(id='1', name='Project 1', key='P1')],
+            'selection': 'P1',
+        }
+        await pilot.pause()
+        await app.workers.wait_for_complete()
+        await pilot.pause()
+        await pilot.press('b')
+        # THEN
+        get_project_boards_mock.assert_awaited_once_with('P1')
+        assert main_screen.board_selector.disabled is False
+        assert isinstance(app.focused, BoardSelectionInput)
+        main_screen.board_selector.value = 84
+        assert main_screen.board_selector.selection == 84
+
+
+@patch.object(APIController, 'count_issues')
+@patch.object(APIController, 'search_issues')
+@patch('jiratui.widgets.screen.MainScreen.fetch_statuses')
+@patch('jiratui.widgets.screen.MainScreen.fetch_issue_types')
+@patch('jiratui.widgets.screen.MainScreen.fetch_projects')
+@pytest.mark.asyncio
+async def test_search_work_items_by_board(
+    fetch_projects_mock: AsyncMock,
+    fetch_issue_types_mock: AsyncMock,
+    fetch_statuses_mock: AsyncMock,
+    search_issues_mock: AsyncMock,
+    count_issues_mock: AsyncMock,
+    app,
+):
+    # GIVEN
+    search_issues_mock.return_value = APIControllerResponse(
+        result=JiraIssueSearchResponse(issues=[])
+    )
+    count_issues_mock.return_value = APIControllerResponse(result=0)
+    app.config.enable_advanced_full_text_search = False
+    async with app.run_test() as pilot:
+        main_screen = cast('MainScreen', app.screen)  # type:ignore[name-defined] # noqa: F821
+        main_screen.board_selector.boards = [('scrum board', 84)]
+        await pilot.pause()
+        main_screen.board_selector.value = 84
+        # WHEN
+        await main_screen._search_work_items()
+        # THEN
+        assert search_issues_mock.call_args.kwargs['board_id'] == 84
+        assert count_issues_mock.call_args.kwargs['board_id'] == 84

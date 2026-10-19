@@ -78,6 +78,13 @@ def test_build_issue_search_jql_order_by_status(order_by: WorkItemsSearchOrderBy
     assert result == expected
 
 
+def test_build_issue_search_jql_with_filter_id():
+    # WHEN
+    result = build_issue_search_jql(project_key='P1', filter_id='10001', jql_query='q=5')
+    # THEN
+    assert result == 'project = "P1" and filter = 10001 and q=5'
+
+
 def test_build_issue_search_jql_with_parameters_and_jql_query_with_order():
     # WHEN
     result = build_issue_search_jql(

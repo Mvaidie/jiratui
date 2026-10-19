@@ -13,6 +13,8 @@ from jiratui.exceptions import (
     ValidationError,
 )
 from jiratui.models import (
+    AgileBoard,
+    AgileBoardTypes,
     AgileSprint,
     AgileSprintState,
     Attachment,
@@ -1583,6 +1585,7 @@ async def test_search_issues_with_custom_search_fields(
         next_page_token=None,
         limit=None,
         order_by=None,
+        filter_id=None,
     )
 
 
@@ -1675,6 +1678,7 @@ async def test_search_issues(
         next_page_token=None,
         limit=None,
         order_by=None,
+        filter_id=None,
     )
 
 
@@ -1791,6 +1795,7 @@ async def test_search_issues_for_jira_dc(
         fields=['id', 'key', 'status', 'issuetype', 'parent', 'summary'],
         limit=None,
         order_by=None,
+        filter_id=None,
     )
 
 
@@ -1866,6 +1871,7 @@ async def test_count_issues_with_criteria(
         assignee=None,
         issue_type=None,
         jql_query='query',
+        filter_id=None,
     )
 
 
@@ -5570,3 +5576,171 @@ async def test_get_jql_autocomplete_suggestions_with_api_error_response(
     # THEN
     assert response == APIControllerResponse(success=False, error='some error')
     get_jql_autocomplete_suggestions_mock.assert_awaited_once_with(None, None, None, None)
+
+
+@pytest.mark.asyncio
+@patch.object(JiraSoftwareCloudAPI, 'get_boards')
+async def test_get_project_boards(
+    get_boards_mock: AsyncMock,
+    jira_api_controller: APIController,
+):
+    # GIVEN
+    get_boards_mock.side_effect = [
+        {
+            'isLast': False,
+            'values': [
+                {'id': 92, 'name': 'Team QA', 'type': 'kanban'},
+                {'id': 84, 'name': 'Bug review', 'type': 'scrum'},
+            ],
+        },
+        {'isLast': True, 'values': [{'id': 7, 'name': 'core', 'type': 'simple'}]},
+    ]
+    # WHEN
+    result = await jira_api_controller.get_project_boards('P1')
+    # THEN
+    assert result == APIControllerResponse(
+        result=[
+            AgileBoard(id=84, name='Bug review', board_type=AgileBoardTypes.SCRUM),
+            AgileBoard(id=7, name='core', board_type=AgileBoardTypes.SIMPLE),
+            AgileBoard(id=92, name='Team QA', board_type=AgileBoardTypes.KANBAN),
+        ]
+    )
+    get_boards_mock.assert_has_awaits(
+        [call(project_key_or_id='P1', offset=0), call(project_key_or_id='P1', offset=2)]
+    )
+
+
+@pytest.mark.asyncio
+@patch.object(JiraSoftwareCloudAPI, 'get_boards')
+async def test_get_project_boards_skips_invalid_boards(
+    get_boards_mock: AsyncMock,
+    jira_api_controller: APIController,
+):
+    # GIVEN
+    get_boards_mock.return_value = {
+        'values': [
+            {'id': 84, 'name': 'scrum board', 'type': 'scrum'},
+            {'id': 92, 'name': 'unknown board', 'type': 'unknown'},
+        ]
+    }
+    # WHEN
+    result = await jira_api_controller.get_project_boards('P1')
+    # THEN
+    assert result == APIControllerResponse(
+        result=[AgileBoard(id=84, name='scrum board', board_type=AgileBoardTypes.SCRUM)]
+    )
+
+
+@pytest.mark.asyncio
+@patch.object(JiraSoftwareCloudAPI, 'get_boards')
+async def test_get_project_boards_raises_exception(
+    get_boards_mock: AsyncMock,
+    jira_api_controller: APIController,
+):
+    # GIVEN
+    get_boards_mock.side_effect = ValueError('test error')
+    # WHEN
+    result = await jira_api_controller.get_project_boards('P1')
+    # THEN
+    assert result == APIControllerResponse(success=False, error='test error')
+
+
+@pytest.mark.asyncio
+@patch.object(JiraSoftwareCloudAPI, 'get_board_configuration')
+async def test_get_board_filter_id_is_cached(
+    get_board_configuration_mock: AsyncMock,
+    jira_api_controller: APIController,
+):
+    # GIVEN
+    get_board_configuration_mock.return_value = {'id': 84, 'filter': {'id': 10001}}
+    # WHEN
+    first_result = await jira_api_controller.get_board_filter_id(84)
+    second_result = await jira_api_controller.get_board_filter_id(84)
+    # THEN
+    assert first_result == APIControllerResponse(result='10001')
+    assert second_result == APIControllerResponse(result='10001')
+    get_board_configuration_mock.assert_awaited_once_with(84)
+
+
+@pytest.mark.asyncio
+@patch.object(JiraSoftwareCloudAPI, 'get_board_configuration')
+async def test_get_board_filter_id_without_filter(
+    get_board_configuration_mock: AsyncMock,
+    jira_api_controller: APIController,
+):
+    # GIVEN
+    get_board_configuration_mock.return_value = {'id': 84}
+    # WHEN
+    result = await jira_api_controller.get_board_filter_id(84)
+    # THEN
+    assert result == APIControllerResponse(
+        success=False, error='Unable to find the filter of the board 84'
+    )
+
+
+@pytest.mark.asyncio
+@patch.object(JiraSoftwareCloudAPI, 'get_board_configuration')
+async def test_get_board_filter_id_raises_exception(
+    get_board_configuration_mock: AsyncMock,
+    jira_api_controller: APIController,
+):
+    # GIVEN
+    get_board_configuration_mock.side_effect = ValueError('test error')
+    # WHEN
+    result = await jira_api_controller.get_board_filter_id(84)
+    # THEN
+    assert result == APIControllerResponse(success=False, error='test error')
+
+
+@pytest.mark.asyncio
+@patch.object(JiraSoftwareCloudAPI, 'get_board_configuration')
+@patch.object(JiraAPI, 'search_issues')
+async def test_search_issues_with_board(
+    search_issues_mock: Mock,
+    get_board_configuration_mock: AsyncMock,
+    jira_api_controller: APIController,
+):
+    # GIVEN
+    get_board_configuration_mock.return_value = {'id': 84, 'filter': {'id': '10001'}}
+    search_issues_mock.return_value = {'issues': []}
+    # WHEN
+    response = await jira_api_controller.search_issues(project_key='P1', board_id=84)
+    # THEN
+    assert response.success is True
+    assert search_issues_mock.call_args.kwargs['filter_id'] == '10001'
+    assert search_issues_mock.call_args.kwargs['updated_from'] is None
+
+
+@pytest.mark.asyncio
+@patch.object(JiraSoftwareCloudAPI, 'get_board_configuration')
+@patch.object(JiraAPI, 'search_issues')
+async def test_search_issues_with_board_without_filter(
+    search_issues_mock: Mock,
+    get_board_configuration_mock: AsyncMock,
+    jira_api_controller: APIController,
+):
+    # GIVEN
+    get_board_configuration_mock.side_effect = ValueError('test error')
+    # WHEN
+    response = await jira_api_controller.search_issues(project_key='P1', board_id=84)
+    # THEN
+    assert response == APIControllerResponse(success=False, error='test error')
+    search_issues_mock.assert_not_called()
+
+
+@pytest.mark.asyncio
+@patch.object(JiraSoftwareCloudAPI, 'get_board_configuration')
+@patch.object(JiraAPI, 'work_items_search_approximate_count')
+async def test_count_issues_with_board(
+    work_items_search_approximate_count_mock: Mock,
+    get_board_configuration_mock: AsyncMock,
+    jira_api_controller: APIController,
+):
+    # GIVEN
+    get_board_configuration_mock.return_value = {'id': 84, 'filter': {'id': '10001'}}
+    work_items_search_approximate_count_mock.return_value = {'count': 3}
+    # WHEN
+    response = await jira_api_controller.count_issues(project_key='P1', board_id=84)
+    # THEN
+    assert response == APIControllerResponse(result=3)
+    assert work_items_search_approximate_count_mock.call_args.kwargs['filter_id'] == '10001'

@@ -19,6 +19,12 @@ def test_standard_action_focus_project_filter():
     ]
 
 
+def test_standard_action_focus_search_board_filter():
+    assert KEY_BINDINGS_STANDARD.get(SupportedActions.FOCUS_SEARCH_BOARD_FILTER.value).get(
+        'keys'
+    ) == ['alt+b']
+
+
 def test_standard_action_focus_search_work_item_type_filter():
     assert KEY_BINDINGS_STANDARD.get(SupportedActions.FOCUS_SEARCH_WORK_ITEM_TYPE_FILTER.value).get(
         'keys'
@@ -405,6 +411,12 @@ def test_legacy_action_config_info():
 
 def test_legacy_action_focus_project_filter():
     assert KEY_BINDINGS_LEGACY.get(SupportedActions.FOCUS_PROJECT_FILTER.value).get('keys') == ['p']
+
+
+def test_legacy_action_focus_search_board_filter():
+    assert KEY_BINDINGS_LEGACY.get(SupportedActions.FOCUS_SEARCH_BOARD_FILTER.value).get(
+        'keys'
+    ) == ['b']
 
 
 def test_legacy_action_focus_search_work_item_type_filter():

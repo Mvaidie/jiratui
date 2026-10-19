@@ -480,6 +480,7 @@ class JiraAPI:
         offset: int | None = None,
         limit: int | None = None,
         order_by: WorkItemsSearchOrderBy | None = None,
+        filter_id: str | None = None,
     ) -> dict:
         """Searches for issues using JQL. Recent updates might not be immediately visible in the returned search
         results.
@@ -511,6 +512,7 @@ class JiraAPI:
             - order by priority desc
             - order by key asc
             - order by key desc
+            filter_id: search items that match the filter (i.e. saved JQL search) with this ID.
 
         Returns:
             A dictionary with the results.
@@ -527,6 +529,7 @@ class JiraAPI:
             jql_query=jql_query,
             search_in_active_sprint=search_in_active_sprint,
             order_by=order_by,
+            filter_id=filter_id,
         )
         payload: dict[str, Any] = {
             'jql': jql,
@@ -551,6 +554,7 @@ class JiraAPI:
         assignee: str | None = None,
         issue_type: int | None = None,
         jql_query: str | None = None,
+        filter_id: str | None = None,
     ) -> dict:
         """Provides an estimated count of the issues that match the JQL. Recent updates might not be immediately visible
         in the returned output. This endpoint requires JQL to be bounded.
@@ -572,6 +576,7 @@ class JiraAPI:
             assignee: search items assigned to this user (by account id).
             issue_type: search items with this type id.
             jql_query: a JQL expression to filter items.
+            filter_id: search items that match the filter (i.e. saved JQL search) with this ID.
 
         Returns:
             A dictionary with the estimated number of items that match the search criteria.
@@ -585,6 +590,7 @@ class JiraAPI:
             assignee=assignee,
             issue_type=issue_type,
             jql_query=jql_query,
+            filter_id=filter_id,
         )
 
         return await self._client.make_request(  # type:ignore[return-value]
@@ -1586,6 +1592,7 @@ class JiraDataCenterAPI(JiraAPI):
         offset: int | None = None,
         limit: int | None = None,
         order_by: WorkItemsSearchOrderBy | None = None,
+        filter_id: str | None = None,
     ) -> dict:
         """Searches for issues using JQL. Recent updates might not be immediately visible in the returned search
         results.
@@ -1618,6 +1625,7 @@ class JiraDataCenterAPI(JiraAPI):
             - order by priority desc
             - order by key asc
             - order by key desc
+            filter_id: search items that match the filter (i.e. saved JQL search) with this ID.
 
         Returns:
             A dictionary with the results.
@@ -1634,6 +1642,7 @@ class JiraDataCenterAPI(JiraAPI):
             jql_query=jql_query,
             search_in_active_sprint=search_in_active_sprint,
             order_by=order_by,
+            filter_id=filter_id,
         )
         payload: dict[str, Any] = {
             'jql': jql,
@@ -1658,6 +1667,7 @@ class JiraDataCenterAPI(JiraAPI):
         assignee: str | None = None,
         issue_type: int | None = None,
         jql_query: str | None = None,
+        filter_id: str | None = None,
     ) -> dict:
         # not supported in Jira DC
         raise NotImplementedError('This feature is not implemented in Jira Data Center platform.')
@@ -2000,6 +2010,24 @@ class JiraSoftwareCloudAPI:
             method=httpx.AsyncClient.get,
             url='board',
             params=params,
+        )
+
+    async def get_board_configuration(self, board_id: int) -> dict:
+        """Retrieves the configuration of a board.
+
+        The configuration includes the ID of the filter (i.e. saved JQL search) that defines the work items displayed
+        in the board.
+
+        Args:
+            board_id: the ID of the board whose configuration we want to retrieve.
+
+        Returns:
+            A dictionary with the configuration of the board.
+        """
+
+        return await self._client.make_request(  # type:ignore[return-value]
+            method=httpx.AsyncClient.get,
+            url=f'board/{board_id}/configuration',
         )
 
     async def get_board_sprints(

@@ -49,6 +49,41 @@ class ProjectSelectionInput(Select):
                         break
 
 
+class BoardSelectionInput(Select):
+    """A Select widget to select a board among the boards of the selected project.
+
+    The widget is disabled while there are no boards to choose from, e.g. when no project is selected.
+    """
+
+    HELP = 'See Search by Board section in the help'
+
+    boards: Reactive[list[tuple[str, int]] | None] = reactive(None, always_update=True)
+    """A list of tuples with the name and id of every board."""
+
+    def __init__(self, boards: list, border_subtitle: str | None = None):
+        super().__init__(
+            options=boards,
+            prompt='Select a board',
+            name='board',
+            id='jira-board-selector',
+            type_to_search=True,
+            compact=True,
+            classes='dropdown',
+            disabled=not boards,
+        )
+        self.border_title = 'Boards'
+        self.border_subtitle = border_subtitle
+
+    @property
+    def help_anchor(self) -> str:
+        return '#search-by-board'
+
+    def watch_boards(self, boards: list[tuple[str, int]] | None = None) -> None:
+        self.clear()
+        self.set_options(boards or [])
+        self.disabled = not boards
+
+
 class IssueTypeSelectionInput(Select):
     """A Select widget for selecting the type of work item among a list of possible types."""
 

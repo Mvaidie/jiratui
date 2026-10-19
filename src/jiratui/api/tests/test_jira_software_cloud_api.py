@@ -427,3 +427,20 @@ async def test_get_project_sprints_no_project_boards_found(
     assert result == []
     get_boards_mock.assert_awaited_once()
     get_board_sprints_mock.assert_not_called()
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_get_board_configuration(jira_api_software_cloud: JiraSoftwareCloudAPI):
+    # GIVEN
+    route = respx.get(get_url_pattern('board/84/configuration'))
+    route.mock(
+        return_value=httpx.Response(
+            200, json={'id': 84, 'name': 'scrum board', 'filter': {'id': '10001'}}
+        )
+    )
+    # WHEN
+    result = await jira_api_software_cloud.get_board_configuration(84)
+    # THEN
+    assert route.calls.last.request.url.path == '/rest/agile/1.0/board/84/configuration'
+    assert result == {'id': 84, 'name': 'scrum board', 'filter': {'id': '10001'}}
