@@ -20,6 +20,11 @@ followed by a colon, e.g. `P1: Blocker`, the search results only display the cod
 the setting `search_results_auto_refresh_interval`) without moving the focus or losing the highlighted work item. It
 can be enabled/disabled with the keys `r` (legacy) or `alt+r` (standard), displayed as `Auto-refresh` in the footer;
 it is enabled on startup when the setting `search_results_auto_refresh_interval` is set.
+- The search results display a red dot before the summary of the work items that are in one of the statuses of the
+setting `stale_work_items_statuses` (`In Development`, `In Review`, `In Test`, `Blocked` and `Resolved` by default) for
+more than `stale_work_items_days` days (7 by default).
+- The search results display a blue dot after the type of the work items that have at least one customer, i.e. a value
+in the field of the setting `customer_field` (`Customer` by default).
 
 ### Minor Improvements
 

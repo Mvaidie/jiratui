@@ -1,3 +1,4 @@
+import asyncio
 from dataclasses import dataclass
 from datetime import date, datetime
 import logging
@@ -1073,6 +1074,12 @@ class MainScreen(Actionable, Screen):
             if table.current_work_item_key
             else None
         )
+        # the stale work items and the work items with customers must be known before updating the results set in the
+        # table
+        table.stale_work_item_keys, table.customer_work_item_keys = await asyncio.gather(
+            self._find_stale_work_items(results.response),
+            self._find_work_items_with_customers(results.response),
+        )
         # store the initial results set in the table to handle local searches
         table.set_initial_results_set(results.response)
         # update the result set in the table
@@ -1091,6 +1098,70 @@ class MainScreen(Actionable, Screen):
         self._update_auto_refresh_legend()
         if not refresh:
             self.run_button.loading = False
+
+    async def _find_stale_work_items(self, response: JiraIssueSearchResponse | None) -> set[str]:
+        """Finds the work items of the search results that are stale.
+
+        A work item is stale when it is in one of the statuses of the setting `stale_work_items_statuses` for more than
+        `stale_work_items_days` days.
+
+        Args:
+            response: the results of the search.
+
+        Returns:
+            The set of keys of the stale work items.
+        """
+
+        statuses: set[str] = {
+            status.strip().lower()
+            for status in self.config.stale_work_items_statuses or []
+            if status and status.strip()
+        }
+        if not response or not statuses:
+            return set()
+        candidates: list[str] = [
+            issue.key
+            for issue in response.issues
+            if issue.status and issue.status.name and issue.status.name.strip().lower() in statuses
+        ]
+        if not candidates:
+            return set()
+        result: APIControllerResponse = await self.api.find_stale_work_items(
+            candidates, days=max(1, self.config.stale_work_items_days)
+        )
+        if not result.success:
+            self.logger.warning(
+                'Unable to find the stale work items', extra={'error': result.error}
+            )
+            return set()
+        return result.result or set()
+
+    async def _find_work_items_with_customers(
+        self, response: JiraIssueSearchResponse | None
+    ) -> set[str]:
+        """Finds the work items of the search results that have at least one customer.
+
+        A work item has a customer when the field of the setting `customer_field` has a value.
+
+        Args:
+            response: the results of the search.
+
+        Returns:
+            The set of keys of the work items with at least one customer.
+        """
+
+        customer_field: str = (self.config.customer_field or '').strip()
+        if not response or not response.issues or not customer_field:
+            return set()
+        result: APIControllerResponse = await self.api.find_work_items_with_customers(
+            [issue.key for issue in response.issues], customer_field=customer_field
+        )
+        if not result.success:
+            self.logger.warning(
+                'Unable to find the work items with customers', extra={'error': result.error}
+            )
+            return set()
+        return result.result or set()
 
     def action_toggle_auto_refresh(self) -> None:
         """Enables/disables the auto-refresh of the search results."""

@@ -56,6 +56,8 @@ def config_for_testing() -> ApplicationConfiguration:
         show_keybinding_hints=False,
         enable_goto=False,
         search_results_columns=None,
+        stale_work_items_statuses=None,
+        customer_field=None,
         search_results_auto_refresh_interval=None,
         styling=None,
     )
@@ -92,6 +94,8 @@ def config_for_testing_jira_dc() -> ApplicationConfiguration:
         show_keybinding_hints=False,
         enable_goto=False,
         search_results_columns=None,
+        stale_work_items_statuses=None,
+        customer_field=None,
         search_results_auto_refresh_interval=None,
         styling=None,
     )
@@ -129,6 +133,8 @@ def jira_api_controller() -> APIController:
         show_keybinding_hints=False,
         enable_goto=False,
         search_results_columns=None,
+        stale_work_items_statuses=None,
+        customer_field=None,
         search_results_auto_refresh_interval=None,
         styling=None,
     )
@@ -166,6 +172,8 @@ def jira_api_controller_for_jira_dc() -> APIController:
         show_keybinding_hints=False,
         enable_goto=False,
         search_results_columns=None,
+        stale_work_items_statuses=None,
+        customer_field=None,
         search_results_auto_refresh_interval=None,
         styling=None,
     )
@@ -210,6 +218,8 @@ def app():
         enable_recent_history=False,
         enable_goto=False,
         search_results_columns=None,
+        stale_work_items_statuses=None,
+        customer_field=None,
         search_results_auto_refresh_interval=None,
         show_favourite_filters_in_jql_editor=False,
     )

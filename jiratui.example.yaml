@@ -51,6 +51,14 @@ full_text_search_minimum_term_length: 3
 enable_advanced_full_text_search: true
 search_results_default_order: 'created desc'
 search_results_auto_refresh_interval: null
+stale_work_items_statuses:
+  - 'In Development'
+  - 'In Review'
+  - 'In Test'
+  - 'Blocked'
+  - 'Resolved'
+stale_work_items_days: 7
+customer_field: 'Customer'
 git_repositories:
   1:
     name: 'My Cool Project'
