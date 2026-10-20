@@ -45,6 +45,7 @@ from jiratui.widgets.filters import (
     ActiveSprintCheckbox,
     BoardSelectionInput,
     CustomerCheckbox,
+    HideStatusesCheckbox,
     IssueSearchCreatedFromWidget,
     IssueSearchCreatedUntilWidget,
     IssueStatusSelectionInput,
@@ -93,6 +94,7 @@ class WorkItemSearchCriteria:
     jql_expression: str | None = None
     search_in_active_sprint: bool = False
     with_customers: bool = False
+    hide_statuses: bool = False
 
 
 @dataclass
@@ -146,6 +148,7 @@ class MainScreen(Actionable, Screen):
         SupportedActions.FOCUS_SEARCH_SORT_FILTER,
         SupportedActions.FOCUS_SEARCH_SPRINT_FILTER,
         SupportedActions.FOCUS_SEARCH_CUSTOMER_FILTER,
+        SupportedActions.FOCUS_SEARCH_HIDDEN_STATUSES_FILTER,
         SupportedActions.FOCUS_SEARCH_JQL,
         SupportedActions.FOCUS_SEARCH_RESULTS,
         SupportedActions.FOCUS_WORK_ITEM_INFORMATION_TAB,
@@ -318,6 +321,19 @@ class MainScreen(Actionable, Screen):
         return self.query_one(CustomerCheckbox)
 
     @property
+    def hide_statuses_checkbox(self) -> HideStatusesCheckbox:
+        return self.query_one(HideStatusesCheckbox)
+
+    @property
+    def hidden_work_item_statuses(self) -> list[str]:
+        """The statuses of the work items hidden from the search results when the checkbox is checked."""
+        return [
+            status.strip()
+            for status in self.config.hidden_work_item_statuses or []
+            if status and status.strip()
+        ]
+
+    @property
     def issue_key_input(self) -> WorkItemInputWidget:
         return self.query_one('#input_issue_key', expect_type=WorkItemInputWidget)
 
@@ -450,6 +466,15 @@ class MainScreen(Actionable, Screen):
                     disabled=not (self.config.customer_field or '').strip(),
                     border_subtitle=(
                         f'{self.current_key_bindings.get(SupportedActions.FOCUS_SEARCH_CUSTOMER_FILTER.value, {}).get("keys", [])[0]}'
+                        if self.config.show_keybinding_hints
+                        else None
+                    ),
+                )
+                yield HideStatusesCheckbox(
+                    self.hidden_work_item_statuses,
+                    value=self.config.hide_work_item_statuses_on_startup,
+                    border_subtitle=(
+                        f'{self.current_key_bindings.get(SupportedActions.FOCUS_SEARCH_HIDDEN_STATUSES_FILTER.value, {}).get("keys", [])[0]}'
                         if self.config.show_keybinding_hints
                         else None
                     ),
@@ -855,6 +880,7 @@ class MainScreen(Actionable, Screen):
             jql_expression=self.jql_expression_input.value,
             search_in_active_sprint=self.active_sprint_checkbox.value,
             with_customers=self.customer_checkbox.value,
+            hide_statuses=self.hide_statuses_checkbox.value,
         )
         if (value := self.issue_key_input.value) and isinstance(value, str) and value.strip():
             criteria.work_item_key = value.strip()
@@ -911,6 +937,12 @@ class MainScreen(Actionable, Screen):
         customer_field: str | None = (
             (self.config.customer_field or '').strip() or None if criteria.with_customers else None
         )
+        # a status selected in the status filter has precedence over the hidden statuses
+        excluded_statuses: list[str] | None = (
+            self.hidden_work_item_statuses or None
+            if criteria.hide_statuses and not criteria.status
+            else None
+        )
 
         # build the JQL query to search items based on a user-provided JQL query expression or a search term.
         jql_query: str | None = self._build_jql_query(
@@ -939,6 +971,7 @@ class MainScreen(Actionable, Screen):
                 ),
                 board_id=board_id,
                 customer_field=customer_field,
+                excluded_statuses=excluded_statuses,
             )
         else:
             response = await self.api.search_issues_by_page_number(
@@ -958,6 +991,7 @@ class MainScreen(Actionable, Screen):
                 ),
                 board_id=board_id,
                 customer_field=customer_field,
+                excluded_statuses=excluded_statuses,
             )
 
         if not response.success or response.result is None:
@@ -985,6 +1019,7 @@ class MainScreen(Actionable, Screen):
                 jql_query=jql_query,
                 board_id=board_id,
                 customer_field=customer_field,
+                excluded_statuses=excluded_statuses,
             )
             if counting.success:
                 estimated_total_issues = counting.result
@@ -1343,6 +1378,9 @@ class MainScreen(Actionable, Screen):
 
     async def action_focus_search_customer_filter(self) -> None:
         self.set_focus(self.customer_checkbox)
+
+    async def action_focus_search_hidden_statuses_filter(self) -> None:
+        self.set_focus(self.hide_statuses_checkbox)
 
     def action_copy_issue_url(self) -> None:
         """Copy to the clipboard the URL of the item currently selected in the search results."""

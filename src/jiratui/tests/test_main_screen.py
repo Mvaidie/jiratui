@@ -100,6 +100,8 @@ def app() -> JiraApp:
         customer_field=None,
         customer_ticket_id_field=None,
         customer_ticket_link_field=None,
+        hidden_work_item_statuses=None,
+        hide_work_item_statuses_on_startup=False,
         search_results_auto_refresh_interval=None,
         styling=None,
     )
@@ -2079,3 +2081,94 @@ async def test_search_work_items_with_customers(
         assert criteria.with_customers is True
         assert search_issues_mock.call_args.kwargs['customer_field'] == 'Customer'
         assert count_issues_mock.call_args.kwargs['customer_field'] == 'Customer'
+
+
+@pytest.mark.parametrize('on_startup', [True, False])
+@patch('jiratui.widgets.screen.MainScreen.fetch_statuses')
+@patch('jiratui.widgets.screen.MainScreen.fetch_issue_types')
+@patch('jiratui.widgets.screen.MainScreen.fetch_projects')
+@pytest.mark.asyncio
+async def test_hide_statuses_checkbox(
+    fetch_projects_mock: AsyncMock,
+    fetch_issue_types_mock: AsyncMock,
+    fetch_statuses_mock: AsyncMock,
+    on_startup: bool,
+    app,
+):
+    # GIVEN
+    app.config.hidden_work_item_statuses = ['Closed', ' ']
+    app.config.hide_work_item_statuses_on_startup = on_startup
+    async with app.run_test() as pilot:
+        main_screen = cast('MainScreen', app.screen)  # type:ignore[name-defined] # noqa: F821
+        checkbox = main_screen.hide_statuses_checkbox
+        # THEN
+        assert checkbox.disabled is False
+        assert checkbox.value is on_startup
+        assert str(checkbox.label) == 'Hide Closed'
+        await pilot.press('h')
+        assert app.focused is checkbox
+
+
+@patch('jiratui.widgets.screen.MainScreen.fetch_statuses')
+@patch('jiratui.widgets.screen.MainScreen.fetch_issue_types')
+@patch('jiratui.widgets.screen.MainScreen.fetch_projects')
+@pytest.mark.asyncio
+async def test_hide_statuses_checkbox_is_disabled_without_statuses(
+    fetch_projects_mock: AsyncMock,
+    fetch_issue_types_mock: AsyncMock,
+    fetch_statuses_mock: AsyncMock,
+    app,
+):
+    # GIVEN
+    app.config.hidden_work_item_statuses = []
+    app.config.hide_work_item_statuses_on_startup = True
+    async with app.run_test():
+        main_screen = cast('MainScreen', app.screen)  # type:ignore[name-defined] # noqa: F821
+        # THEN
+        assert main_screen.hide_statuses_checkbox.disabled is True
+        assert main_screen.hide_statuses_checkbox.value is False
+
+
+@pytest.mark.parametrize(
+    'hide_statuses, status, expected_excluded_statuses',
+    [
+        (True, None, ['Closed']),
+        (False, None, None),
+        (True, 3, None),  # the status selected in the status filter has precedence
+    ],
+)
+@patch.object(APIController, 'count_issues')
+@patch.object(APIController, 'search_issues')
+@patch('jiratui.widgets.screen.MainScreen.fetch_statuses')
+@patch('jiratui.widgets.screen.MainScreen.fetch_issue_types')
+@patch('jiratui.widgets.screen.MainScreen.fetch_projects')
+@pytest.mark.asyncio
+async def test_search_work_items_with_hidden_statuses(
+    fetch_projects_mock: AsyncMock,
+    fetch_issue_types_mock: AsyncMock,
+    fetch_statuses_mock: AsyncMock,
+    search_issues_mock: AsyncMock,
+    count_issues_mock: AsyncMock,
+    hide_statuses: bool,
+    status,
+    expected_excluded_statuses,
+    app,
+):
+    # GIVEN
+    app.config.hidden_work_item_statuses = ['Closed']
+    app.config.hide_work_item_statuses_on_startup = True
+    app.config.enable_advanced_full_text_search = False
+    search_issues_mock.return_value = APIControllerResponse(
+        result=JiraIssueSearchResponse(issues=[])
+    )
+    count_issues_mock.return_value = APIControllerResponse(result=0)
+    async with app.run_test():
+        main_screen = cast('MainScreen', app.screen)  # type:ignore[name-defined] # noqa: F821
+        criteria = WorkItemSearchCriteria(hide_statuses=hide_statuses, status=status)
+        # WHEN
+        await main_screen._search_work_items(criteria=criteria)
+        # THEN
+        assert (
+            search_issues_mock.call_args.kwargs['excluded_statuses'] == expected_excluded_statuses
+        )
+        assert count_issues_mock.call_args.kwargs['excluded_statuses'] == expected_excluded_statuses

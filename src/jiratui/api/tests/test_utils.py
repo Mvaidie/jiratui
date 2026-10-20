@@ -184,3 +184,22 @@ def test_build_issue_search_jql_with_field_with_value(field_with_value: str, exp
     result = build_issue_search_jql(project_key='P1', field_with_value=field_with_value)
     # THEN
     assert result == expected
+
+
+@pytest.mark.parametrize(
+    'excluded_statuses, expected',
+    [
+        (['Closed'], 'project = "P1" and status not in ("Closed")'),
+        (
+            [' Closed ', '', 'Won\'t "Do"'],
+            'project = "P1" and status not in ("Closed", "Won\'t \\"Do\\"")',
+        ),
+        ([], 'project = "P1"'),
+        (None, 'project = "P1"'),
+    ],
+)
+def test_build_issue_search_jql_with_excluded_statuses(excluded_statuses, expected: str):
+    # WHEN
+    result = build_issue_search_jql(project_key='P1', excluded_statuses=excluded_statuses)
+    # THEN
+    assert result == expected

@@ -227,6 +227,12 @@ class ApplicationConfiguration(BaseSettings):
     for more than `stale_work_items_days` days. Set it to an empty list to disable this feature."""
     stale_work_items_days: int = 7
     """The number of days after which a work item in one of the statuses of `stale_work_items_statuses` is stale."""
+    hidden_work_item_statuses: list[str] | None = ['Closed']
+    """The statuses of the work items hidden from the search results when the checkbox `Hide Closed` of the search
+    filters is checked. Set it to an empty list to disable the checkbox."""
+    hide_work_item_statuses_on_startup: bool = True
+    """When `True` the checkbox that hides the work items of the statuses of `hidden_work_item_statuses` is checked on
+    startup."""
     customer_ticket_id_field: str | None = 'Customer ticket ID'
     """The field with the ID of the ticket of the customer, displayed in the Customer tab of the Info tab of the work
     items. The field is identified by its name or by its ID, e.g. `customfield_10087`."""

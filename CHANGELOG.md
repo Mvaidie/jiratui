@@ -30,6 +30,9 @@ with the keys `m` (legacy) or `alt+m` (standard).
 - Add a `Customer` tab to the `Info` tab of the work items, right after the description. It displays the customers,
 the ID of the ticket of the customer and the link to the ticket of the customer; the fields are defined by the settings
 `customer_field`, `customer_ticket_id_field` and `customer_ticket_link_field`.
+- Add the `Hide Closed` filter: a checkbox, checked by default, that hides from the search results the work items in
+the statuses of the setting `hidden_work_item_statuses` (`Closed` by default). A status selected in the status filter
+has precedence. It can be focused with the keys `h` (legacy) or `alt+h` (standard).
 
 ### Minor Improvements
 

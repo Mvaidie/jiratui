@@ -281,6 +281,38 @@ class CustomerCheckbox(Checkbox):
         return '#search-by-customer'
 
 
+class HideStatusesCheckbox(Checkbox):
+    """A checkbox to hide from the search results the work items in some statuses, e.g. `Closed`.
+
+    The statuses are defined by the setting `hidden_work_item_statuses`; the checkbox is disabled when the setting is not
+    set.
+    """
+
+    HELP = 'See Hide Closed Work Items section in the help'
+
+    def __init__(
+        self,
+        statuses: list[str],
+        value: bool = True,
+        border_subtitle: str | None = None,
+    ):
+        super().__init__(
+            id='hide-statuses-checkbox',
+            label=f'Hide {statuses[0]}' if len(statuses) == 1 else 'Hide Statuses',
+            value=value and bool(statuses),
+            disabled=not statuses,
+            classes='input-checkbox',
+            tooltip=f'Hide the work items in the statuses: {", ".join(statuses)}'
+            if statuses
+            else None,
+        )
+        self.border_subtitle = border_subtitle
+
+    @property
+    def help_anchor(self) -> str:
+        return '#hide-closed-work-items'
+
+
 class JQLSearchWidget(Actionable, Input):
     """An input widget that holds a JQL expression.
 

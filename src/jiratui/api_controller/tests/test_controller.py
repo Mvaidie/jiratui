@@ -1587,6 +1587,7 @@ async def test_search_issues_with_custom_search_fields(
         order_by=None,
         filter_id=None,
         field_with_value=None,
+        excluded_statuses=None,
     )
 
 
@@ -1681,6 +1682,7 @@ async def test_search_issues(
         order_by=None,
         filter_id=None,
         field_with_value=None,
+        excluded_statuses=None,
     )
 
 
@@ -1799,6 +1801,7 @@ async def test_search_issues_for_jira_dc(
         order_by=None,
         filter_id=None,
         field_with_value=None,
+        excluded_statuses=None,
     )
 
 
@@ -1876,6 +1879,7 @@ async def test_count_issues_with_criteria(
         jql_query='query',
         filter_id=None,
         field_with_value=None,
+        excluded_statuses=None,
     )
 
 
@@ -5871,3 +5875,24 @@ async def test_search_issues_with_customers(
     # THEN
     assert response.success is True
     assert search_issues_mock.call_args.kwargs['field_with_value'] == 'Customer'
+
+
+@pytest.mark.asyncio
+@patch.object(JiraAPI, 'work_items_search_approximate_count')
+@patch.object(JiraAPI, 'search_issues')
+async def test_search_and_count_issues_with_excluded_statuses(
+    search_issues_mock: AsyncMock,
+    work_items_search_approximate_count_mock: AsyncMock,
+    jira_api_controller: APIController,
+):
+    # GIVEN
+    search_issues_mock.return_value = {'issues': []}
+    work_items_search_approximate_count_mock.return_value = {'count': 3}
+    # WHEN
+    await jira_api_controller.search_issues(project_key='P1', excluded_statuses=['Closed'])
+    await jira_api_controller.count_issues(project_key='P1', excluded_statuses=['Closed'])
+    # THEN
+    assert search_issues_mock.call_args.kwargs['excluded_statuses'] == ['Closed']
+    assert work_items_search_approximate_count_mock.call_args.kwargs['excluded_statuses'] == [
+        'Closed'
+    ]

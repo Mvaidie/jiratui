@@ -49,6 +49,8 @@ def app_with_unrecognized_config_theme() -> JiraApp:
         customer_field=None,
         customer_ticket_id_field=None,
         customer_ticket_link_field=None,
+        hidden_work_item_statuses=None,
+        hide_work_item_statuses_on_startup=False,
         search_results_auto_refresh_interval=None,
         styling=None,
     )
@@ -93,6 +95,8 @@ def app_with_input_and_config_theme() -> JiraApp:
         customer_field=None,
         customer_ticket_id_field=None,
         customer_ticket_link_field=None,
+        hidden_work_item_statuses=None,
+        hide_work_item_statuses_on_startup=False,
         search_results_auto_refresh_interval=None,
         styling=None,
     )
@@ -137,6 +141,8 @@ def app_with_input_theme() -> JiraApp:
         customer_field=None,
         customer_ticket_id_field=None,
         customer_ticket_link_field=None,
+        hidden_work_item_statuses=None,
+        hide_work_item_statuses_on_startup=False,
         search_results_auto_refresh_interval=None,
         styling=None,
     )
@@ -181,6 +187,8 @@ def app_without_config_theme() -> JiraApp:
         customer_field=None,
         customer_ticket_id_field=None,
         customer_ticket_link_field=None,
+        hidden_work_item_statuses=None,
+        hide_work_item_statuses_on_startup=False,
         search_results_auto_refresh_interval=None,
         styling=None,
     )
@@ -225,6 +233,8 @@ def app() -> JiraApp:
         customer_field=None,
         customer_ticket_id_field=None,
         customer_ticket_link_field=None,
+        hidden_work_item_statuses=None,
+        hide_work_item_statuses_on_startup=False,
         search_results_auto_refresh_interval=None,
         styling=None,
     )
@@ -621,6 +631,8 @@ def config_dict() -> dict:
         'customer_field': None,
         'customer_ticket_id_field': None,
         'customer_ticket_link_field': None,
+        'hidden_work_item_statuses': None,
+        'hide_work_item_statuses_on_startup': False,
         'search_results_auto_refresh_interval': None,
         'styling': None,
     }
