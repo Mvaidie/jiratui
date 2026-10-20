@@ -1607,7 +1607,7 @@ def test_create_widgets_for_work_item_creation_with_team_widget_in_cloud(
 ):
     # GIVEN
     config_for_testing.enable_creating_additional_fields = True
-    field = {**TEAM_FIELD_CREATE_METADATA}
+    field: dict = {**TEAM_FIELD_CREATE_METADATA}
     field['schema'] = {**field['schema'], 'custom': schema_custom}
     # WHEN
     with patch('jiratui.widgets.create_work_item.factory._uses_cloud_api') as uses_cloud_api_mock:
