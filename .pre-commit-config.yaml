@@ -12,7 +12,7 @@ repos:
         args: ['--maxkb=1200']
   - repo: https://github.com/astral-sh/ruff-pre-commit
     # Ruff version.
-    rev: v0.15.20
+    rev: v0.17.1
     hooks:
       # Run the linter.
       - id: ruff
@@ -20,11 +20,11 @@ repos:
       # Run the formatter.
       - id: ruff-format
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: 'v2.1.0'
+    rev: 'v2.4.0'
     hooks:
       - id: mypy
   - repo: https://github.com/seddonym/import-linter
-    rev: v2.13
+    rev: v2.15
     hooks:
       - id: import-linter
         name: '[Imports] Lint'

@@ -307,13 +307,13 @@ supported in Jira Cloud.
 - Search work items assigned to John Smith
 
 ```python
-assignee = "John Smith"
+assignee = 'John Smith'
 ```
 
 or searching by the user's email address:
 
 ```python
-assignee = "john@smith.com"
+assignee = 'john@smith.com'
 ```
 
 # Filtering Search Results

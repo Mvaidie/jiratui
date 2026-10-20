@@ -30,19 +30,19 @@ classifiers = [
 ]
 dependencies = [
     "click>=8.5.0,<9.0.0",
-    "gitpython>=3.1.62,<3.2.0",
+    "gitpython>=3.2.1,<3.3.0",
     "httpx>=0.28.1",
     "marklas==0.8.6",
     "puremagic>=2.2.0,<3.0.0",
-    "pydantic-settings[yaml]>=2.14.2,<3.0.0",
+    "pydantic-settings[yaml]>=2.16.1,<3.0.0",
     "python-dateutil>=2.9.0.post0",
     "python-json-logger>=4.2.0,<5.0.0",
     "questionary>=2.1.1",
     "textual-autocomplete>=4.0.6",
-    "textual-image>=0.13.2,<0.14.0",
+    "textual-image>=0.14.1,<0.15.0",
     "textual[syntax]>=8.2.8,<9.0.0",
     "urllib3>=2.8.0,<2.9.0",
-    "xdg-base-dirs>=6.0.2",
+    "xdg-base-dirs>=6.0.3",
 ]
 
 [project.urls]
@@ -54,23 +54,23 @@ Changelog = "https://github.com/whyisdifficult/jiratui/blob/main/CHANGELOG.md"
 
 [dependency-groups]
 dev = [
-    "pre-commit>=4.6.0,<4.7.0",
+    "pre-commit>=4.7.0,<4.8.0",
     "textual-dev>=1.8.0",
 ]
 docs = [
     "myst-parser>=5.1.0,<6.0.0",
-    "sphinx>=9.1.0,<10.0.0",
+    "sphinx>=9.1.1,<10.0.0",
     "sphinx-autodoc2[cli]>=0.5.0",
     "sphinx-design>=0.6.1",
-    "sphinx-markdown-builder>=0.6.10,<0.7.0",
+    "sphinx-markdown-builder>=0.6.11,<0.7.0",
     "sphinx-rtd-theme>=3.0.2",
     "sphinx-togglebutton>=0.4.5",
-    "sphinxcontrib-mermaid>=2.0.2,<2.1.0",
+    "sphinxcontrib-mermaid>=2.1.1,<2.2.0",
 ]
 lint = [
-    "import-linter>=2.11",
-    "mypy>=2.1.0,<3.0.0",
-    "ruff>=0.15.20,<0.16.0",
+    "import-linter>=2.15",
+    "mypy>=2.4.0,<3.0.0",
+    "ruff>=0.17.1,<0.18.0",
 ]
 test = [
     "pytest==9.1.1",

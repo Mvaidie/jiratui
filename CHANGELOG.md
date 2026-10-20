@@ -47,6 +47,15 @@ Spike, Story, Task and Technical Story.
 blue, for the lowest one, including in the column `Priority` of the search results. The rank of a priority comes from
 its code, e.g. `P1: Blocker`, or from the default priorities of Jira (`Highest` to `Lowest`). The colors can be
 customized with `styling.work_item_priority_colors`, whose keys can also be codes like `p1`.
+- Bump `gitpython` to `v3.2.1`, `pydantic-settings` to `v2.16.1`, `textual-image` to `v0.14.1` and `xdg-base-dirs` to
+`v6.0.3`. The lock file also updates the transitive dependencies, e.g. `rich` `v15.0.0`, `pillow` `v13.0.0` and
+`pydantic` `v2.14.1`.
+- Bump the development tools: `ruff` `v0.17.1` (it also formats the Python code blocks of the Markdown files), `mypy`
+`v2.4.0`, `import-linter` `v2.15`, `pre-commit` `v4.7.0` and the pre-commit hooks.
+- Bump the documentation tools: `sphinx` `v9.1.1`, `sphinx-markdown-builder` `v0.6.11` and `sphinxcontrib-mermaid`
+`v2.1.1`. Read the Docs builds the documentation with Ubuntu 24.04 and Python 3.14.
+- Bump the GitHub Actions (`actions/checkout` `v7`, `astral-sh/setup-uv` `v10.3.0`, `actions/setup-python` `v7`,
+`actions/upload-artifact` `v7.0.2`, Pages actions) and the version of `uv` used by the workflows to `0.12.24`.
 
 ## [1.18.0] 2026-10-15
 
