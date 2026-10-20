@@ -1231,6 +1231,7 @@ class APIController:
         fields: list[str] | None = None,
         board_id: int | None = None,
         customer_field: str | None = None,
+        excluded_statuses: list[str] | None = None,
     ) -> APIControllerResponse:
         """Searches for issues matching specified JQL query and other criteria.
 
@@ -1253,6 +1254,7 @@ class APIController:
             board_id: search work items displayed in the board with this ID, i.e. that match the board's filter.
             customer_field: search work items that have at least one customer, i.e. a value in this field (name or
             ID).
+            excluded_statuses: search work items whose status is not one of these statuses (names).
 
         Returns:
             An instance of `APIControllerResponse` with the work items found or, en error if the search can not be
@@ -1288,6 +1290,7 @@ class APIController:
                 order_by=order_by,
                 filter_id=board_filter_response.result,
                 field_with_value=customer_field,
+                excluded_statuses=excluded_statuses,
             )
         except ServiceUnavailableException:
             return APIControllerResponse(
@@ -1335,6 +1338,7 @@ class APIController:
         fields: list[str] | None = None,
         board_id: int | None = None,
         customer_field: str | None = None,
+        excluded_statuses: list[str] | None = None,
     ) -> APIControllerResponse:
         """Searches for issues matching specified JQL query and other criteria.
 
@@ -1361,6 +1365,7 @@ class APIController:
             board_id: search work items displayed in the board with this ID, i.e. that match the board's filter.
             customer_field: search work items that have at least one customer, i.e. a value in this field (name or
             ID).
+            excluded_statuses: search work items whose status is not one of these statuses (names).
 
         Returns:
             An instance of `APIControllerResponse` with the work items found or, en error if the search can not be
@@ -1403,6 +1408,7 @@ class APIController:
                 order_by=order_by,
                 filter_id=board_filter_response.result,
                 field_with_value=customer_field,
+                excluded_statuses=excluded_statuses,
             )
         except ServiceUnavailableException as e:
             exception_details: dict = self._extract_exception_details(e)
@@ -1454,6 +1460,7 @@ class APIController:
         jql_query: str | None = None,
         board_id: int | None = None,
         customer_field: str | None = None,
+        excluded_statuses: list[str] | None = None,
     ) -> APIControllerResponse:
         """Estimates the number of work items yield by a search.
 
@@ -1468,6 +1475,7 @@ class APIController:
             board_id: search work items displayed in the board with this ID, i.e. that match the board's filter.
             customer_field: search work items that have at least one customer, i.e. a value in this field (name or
             ID).
+            excluded_statuses: search work items whose status is not one of these statuses (names).
 
         Returns:
             An instance of `APIControllerResponse` with the count of work items or, en error if the estimation can not
@@ -1500,6 +1508,7 @@ class APIController:
                 jql_query=criteria.get('jql'),
                 filter_id=board_filter_response.result,
                 field_with_value=customer_field,
+                excluded_statuses=excluded_statuses,
             )
         except NotImplementedError:
             return APIControllerResponse(result=0)

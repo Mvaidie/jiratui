@@ -35,6 +35,7 @@ def build_issue_search_jql(
     order_by: WorkItemsSearchOrderBy | None = None,
     filter_id: str | None = None,
     field_with_value: str | None = None,
+    excluded_statuses: list[str] | None = None,
 ) -> str:
     """Builds a JQL query expression to search issues based on different criteria.
 
@@ -57,6 +58,7 @@ def build_issue_search_jql(
         example, to search the work items of a board.
         field_with_value: find work items that have a value in this field, identified by its name or by its ID. This is
         used, for example, to search the work items that have customers.
+        excluded_statuses: find work items whose status is not one of these statuses, identified by their names.
 
     Returns:
         A string with the JQL query.
@@ -68,6 +70,11 @@ def build_issue_search_jql(
         fields.append(f'filter = {filter_id}')
     if field_with_value and field_with_value.strip():
         fields.append(f'{build_jql_field_reference(field_with_value)} is not EMPTY')
+    if statuses := [
+        status.strip() for status in excluded_statuses or [] if status and status.strip()
+    ]:
+        values = ', '.join('"' + status.replace('"', '\\"') + '"' for status in statuses)
+        fields.append(f'status not in ({values})')
     if created_from:
         value = date.strftime(created_from, '%Y-%m-%d')
         fields.append(f'created >= "{value}"')

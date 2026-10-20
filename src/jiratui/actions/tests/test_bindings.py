@@ -783,3 +783,15 @@ def test_legacy_action_focus_search_customer_filter():
     assert KEY_BINDINGS_LEGACY.get(SupportedActions.FOCUS_SEARCH_CUSTOMER_FILTER.value).get(
         'keys'
     ) == ['m']
+
+
+def test_standard_action_focus_search_hidden_statuses_filter():
+    assert KEY_BINDINGS_STANDARD.get(
+        SupportedActions.FOCUS_SEARCH_HIDDEN_STATUSES_FILTER.value
+    ).get('keys') == ['alt+h']
+
+
+def test_legacy_action_focus_search_hidden_statuses_filter():
+    assert KEY_BINDINGS_LEGACY.get(SupportedActions.FOCUS_SEARCH_HIDDEN_STATUSES_FILTER.value).get(
+        'keys'
+    ) == ['h']

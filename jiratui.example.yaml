@@ -61,6 +61,9 @@ stale_work_items_days: 7
 customer_field: 'Customer'
 customer_ticket_id_field: 'Customer ticket ID'
 customer_ticket_link_field: 'Customer ticket link'
+hidden_work_item_statuses:
+  - 'Closed'
+hide_work_item_statuses_on_startup: true
 git_repositories:
   1:
     name: 'My Cool Project'

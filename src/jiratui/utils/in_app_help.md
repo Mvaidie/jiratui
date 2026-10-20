@@ -38,6 +38,7 @@ context.
 | `alt+o`      | Focuses the sorting search input                       | Main Screen                                                             |
 | `alt+v`      | Focuses the active-sprint search input                 | Main Screen                                                             |
 | `alt+m`      | Focuses the customer search input                      | Main Screen                                                             |
+| `alt+h`      | Focuses the hidden statuses search input                 | Main Screen                                                             |
 | `alt+j`      | Focuses the JQL search input                           | Main Screen                                                             |
 | `/`          | Search work items                                      | Main Screen                                                             |
 | `ctrl+r`     | Search work items                                      | Main Screen                                                             |
@@ -118,6 +119,7 @@ context.
 | `o`                     | Focuses the sorting search input                         |         |
 | `v`                     | Focuses the active-sprint search input                   |         |
 | `m`                     | Focuses the customer search input                        |         |
+| `h`                     | Focuses the hidden statuses search input                   |         |
 | `j`                     | Focuses the JQL search input                             |         |
 | `^r`                    | Search work items                                        |         |
 | `r`                     | Toggles the auto-refresh of the search results           |         |
@@ -243,6 +245,14 @@ within the last 15 days. The number of days can be specified by the configuratio
 
 Search work items that have at least one customer, i.e. a value in the field of the setting `customer_field`
 (`Customer` by default). The checkbox is disabled when the setting is not set.
+
+### Hide Closed Work Items
+
+The checkbox `Hide Closed`, checked by default, hides from the search results the work items in the statuses of the
+setting `hidden_work_item_statuses` (`Closed` by default). The setting `hide_work_item_statuses_on_startup` defines
+whether the checkbox is checked on startup; set `hidden_work_item_statuses` to an empty list to disable the checkbox.
+A status selected in the status filter has precedence: the work items of that status are displayed even when the
+checkbox is checked.
 
 ### Search by Active Sprint
 

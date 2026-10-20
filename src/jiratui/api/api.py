@@ -482,6 +482,7 @@ class JiraAPI:
         order_by: WorkItemsSearchOrderBy | None = None,
         filter_id: str | None = None,
         field_with_value: str | None = None,
+        excluded_statuses: list[str] | None = None,
     ) -> dict:
         """Searches for issues using JQL. Recent updates might not be immediately visible in the returned search
         results.
@@ -515,6 +516,7 @@ class JiraAPI:
             - order by key desc
             filter_id: search items that match the filter (i.e. saved JQL search) with this ID.
             field_with_value: search items that have a value in this field, identified by its name or by its ID.
+            excluded_statuses: search items whose status is not one of these statuses, identified by their names.
 
         Returns:
             A dictionary with the results.
@@ -533,6 +535,7 @@ class JiraAPI:
             order_by=order_by,
             filter_id=filter_id,
             field_with_value=field_with_value,
+            excluded_statuses=excluded_statuses,
         )
         payload: dict[str, Any] = {
             'jql': jql,
@@ -559,6 +562,7 @@ class JiraAPI:
         jql_query: str | None = None,
         filter_id: str | None = None,
         field_with_value: str | None = None,
+        excluded_statuses: list[str] | None = None,
     ) -> dict:
         """Provides an estimated count of the issues that match the JQL. Recent updates might not be immediately visible
         in the returned output. This endpoint requires JQL to be bounded.
@@ -582,6 +586,7 @@ class JiraAPI:
             jql_query: a JQL expression to filter items.
             filter_id: search items that match the filter (i.e. saved JQL search) with this ID.
             field_with_value: search items that have a value in this field, identified by its name or by its ID.
+            excluded_statuses: search items whose status is not one of these statuses, identified by their names.
 
         Returns:
             A dictionary with the estimated number of items that match the search criteria.
@@ -597,6 +602,7 @@ class JiraAPI:
             jql_query=jql_query,
             filter_id=filter_id,
             field_with_value=field_with_value,
+            excluded_statuses=excluded_statuses,
         )
 
         return await self._client.make_request(  # type:ignore[return-value]
@@ -1600,6 +1606,7 @@ class JiraDataCenterAPI(JiraAPI):
         order_by: WorkItemsSearchOrderBy | None = None,
         filter_id: str | None = None,
         field_with_value: str | None = None,
+        excluded_statuses: list[str] | None = None,
     ) -> dict:
         """Searches for issues using JQL. Recent updates might not be immediately visible in the returned search
         results.
@@ -1634,6 +1641,7 @@ class JiraDataCenterAPI(JiraAPI):
             - order by key desc
             filter_id: search items that match the filter (i.e. saved JQL search) with this ID.
             field_with_value: search items that have a value in this field, identified by its name or by its ID.
+            excluded_statuses: search items whose status is not one of these statuses, identified by their names.
 
         Returns:
             A dictionary with the results.
@@ -1652,6 +1660,7 @@ class JiraDataCenterAPI(JiraAPI):
             order_by=order_by,
             filter_id=filter_id,
             field_with_value=field_with_value,
+            excluded_statuses=excluded_statuses,
         )
         payload: dict[str, Any] = {
             'jql': jql,
@@ -1678,6 +1687,7 @@ class JiraDataCenterAPI(JiraAPI):
         jql_query: str | None = None,
         filter_id: str | None = None,
         field_with_value: str | None = None,
+        excluded_statuses: list[str] | None = None,
     ) -> dict:
         # not supported in Jira DC
         raise NotImplementedError('This feature is not implemented in Jira Data Center platform.')
