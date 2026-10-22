@@ -12,6 +12,7 @@ from jiratui.widgets.commons.adf import ADFMarkdownTextAreaWidget, ReadOnlyADFMa
 from jiratui.widgets.commons.factory_utils import build_read_only_rich_text_widget
 from jiratui.widgets.commons.users import JiraUserInput
 from jiratui.widgets.commons.widgets import (
+    EmptyTextAreaStaticWidget,
     PlainTextTextAreaWidget,
     WebLinksCollapsible,
     WebLinksDataTable,
@@ -1567,3 +1568,119 @@ async def test_work_item_info_container_displays_the_definition_of_ready_and_don
             'Definition of Done (0/1)',
             '☐ Reviewed',
         ]
+
+
+def _adf(text: str) -> dict:
+    return {
+        'type': 'doc',
+        'version': 1,
+        'content': [{'type': 'paragraph', 'content': [{'type': 'text', 'text': text}]}],
+    }
+
+
+@patch.object(APIController, 'get_field_ids')
+@pytest.mark.asyncio
+async def test_work_item_info_container_displays_the_acceptance_criteria_and_the_specification_analysis(
+    get_field_ids_mock: AsyncMock,
+    jira_issues_with_custom_fields,
+    app,
+):
+    # GIVEN
+    app.config.acceptance_criteria_field = 'Acceptance Criterias'
+    app.config.specification_analysis_field = 'Specification analysis'
+    get_field_ids_mock.side_effect = lambda fields: APIControllerResponse(
+        result={
+            'Acceptance Criterias': 'customfield_10845',
+            'Specification analysis': 'customfield_10812',
+        }
+    )
+    work_item = jira_issues_with_custom_fields[0]
+    work_item.description = _adf('The description')
+    work_item.edit_meta = {
+        'fields': {
+            'description': {'key': 'description', 'name': 'description', 'required': True},
+            'customfield_10845': {'key': 'customfield_10845', 'name': 'Acceptance Criterias'},
+            'customfield_10812': {'key': 'customfield_10812', 'name': 'Specification analysis'},
+        }
+    }
+    work_item.custom_fields = {
+        'customfield_10845': _adf('The acceptance criteria'),
+        'customfield_10812': _adf('The analysis'),
+    }
+    async with app.run_test() as pilot:
+        widget = WorkItemInfoContainer()
+        await app.screen.mount(widget)
+        await app.workers.wait_for_complete()
+        # WHEN
+        widget.issue = work_item
+        await app.workers.wait_for_complete()
+        await pilot.pause()
+        # THEN
+        panes = list(widget.info_tabbed_content.query(TabPane))
+        assert [pane.id for pane in panes] == ['pane-description', 'pane-customfield_10812']
+        description_widgets = list(panes[0].query(ReadOnlyADFMarkdownTextAreaWidget))
+        assert [w.border_title for w in description_widgets] == [
+            'Description',
+            'Acceptance Criterias',
+        ]
+        assert 'The acceptance criteria' in description_widgets[1].text_content
+        analysis = panes[1].query_one(ReadOnlyADFMarkdownTextAreaWidget)
+        assert analysis.jira_field_key == 'customfield_10812'
+        assert 'The analysis' in analysis.text_content
+
+
+@patch.object(APIController, 'get_field_ids')
+@patch.object(
+    WorkItemInfoContainer, '_update_additional_fields_ignore_ids', PropertyMock(return_value=[])
+)
+@patch.object(
+    WorkItemInfoContainer, '_enable_updating_additional_fields', PropertyMock(return_value=True)
+)
+@pytest.mark.asyncio
+async def test_work_item_info_container_with_empty_specification_analysis_and_additional_fields(
+    get_field_ids_mock: AsyncMock,
+    jira_issues_with_custom_fields,
+    app,
+):
+    # GIVEN
+    app.config.acceptance_criteria_field = 'Acceptance Criterias'
+    app.config.specification_analysis_field = 'Specification analysis'
+    get_field_ids_mock.side_effect = lambda fields: APIControllerResponse(
+        result={
+            'Acceptance Criterias': 'customfield_10845',
+            'Specification analysis': 'customfield_10812',
+        }
+    )
+    textarea_schema = {'custom': 'com.atlassian.jira.plugin.system.customfieldtypes:textarea'}
+    work_item = jira_issues_with_custom_fields[0]
+    work_item.edit_meta = {
+        'fields': {
+            'description': {'key': 'description', 'name': 'description', 'required': True},
+            'customfield_10845': {
+                'schema': textarea_schema,
+                'key': 'customfield_10845',
+                'name': 'Acceptance Criterias',
+            },
+            'customfield_10812': {
+                'schema': textarea_schema,
+                'key': 'customfield_10812',
+                'name': 'Specification analysis',
+            },
+        }
+    }
+    work_item.custom_fields = {'customfield_10845': None, 'customfield_10812': None}
+    async with app.run_test() as pilot:
+        widget = WorkItemInfoContainer()
+        await app.screen.mount(widget)
+        await app.workers.wait_for_complete()
+        # WHEN
+        widget.issue = work_item
+        await app.workers.wait_for_complete()
+        await pilot.pause()
+        # THEN
+        # the fields are not displayed again as additional fields
+        panes = list(widget.info_tabbed_content.query(TabPane))
+        assert [pane.id for pane in panes] == ['pane-description', 'pane-customfield_10812']
+        # an empty acceptance criteria is not displayed; an empty specification analysis can be edited
+        assert len(panes[0].children) == 1
+        assert isinstance(panes[1].children[0], EmptyTextAreaStaticWidget)

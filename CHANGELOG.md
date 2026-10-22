@@ -36,6 +36,11 @@ has precedence. It can be focused with the keys `h` (legacy) or `alt+h` (standar
 - Add a `Definition of` tab to the `Info` tab of the work items, after the customers. It displays the Definition of
 Ready and the Definition of Done of the work item as checklists, defined by the settings `definition_of_ready_field`
 (`DoR` by default) and `definition_of_done_field` (`DoD` by default).
+- Display the acceptance criteria of the work items after their description in the `Info` tab (setting
+`acceptance_criteria_field`, `Acceptance Criterias` by default).
+- Add a `Specification analysis` tab to the `Info` tab of the work items, right after the description (setting
+`specification_analysis_field`, `Specification analysis` by default). Its content can be viewed, copied and edited.
+- Display the labels of the work items in the `Details` tab.
 
 ### Minor Improvements
 

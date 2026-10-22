@@ -64,6 +64,8 @@ customer_ticket_link_field: 'Customer ticket link'
 hidden_work_item_statuses:
   - 'Closed'
 hide_work_item_statuses_on_startup: true
+acceptance_criteria_field: 'Acceptance Criterias'
+specification_analysis_field: 'Specification analysis'
 definition_of_ready_field: 'DoR'
 definition_of_done_field: 'DoD'
 git_repositories:

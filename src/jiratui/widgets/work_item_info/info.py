@@ -274,6 +274,103 @@ class WorkItemInfoContainer(Vertical):
                 if web_links:
                     await pane.mount(WebLinksCollapsible(WebLinksDataTable(web_links)))
                 await pane.mount(widget)
+                # the acceptance criteria are displayed after the description
+                if acceptance_criteria_widget := await self._build_acceptance_criteria_widget(
+                    work_item
+                ):
+                    await pane.mount(acceptance_criteria_widget)
+
+    async def _get_field_id(self, field: str | None) -> str | None:
+        """Retrieves the ID of a field identified by a setting, i.e. by its name or by its ID.
+
+        Args:
+            field: the name or the ID of the field.
+
+        Returns:
+            The ID of the field or `None` if the setting is not set or the field does not exist.
+        """
+
+        if not (cleaned := (field or '').strip()):
+            return None
+        response: APIControllerResponse = await self.app.api.get_field_ids([cleaned])  # type:ignore[attr-defined]
+        if not response.success:
+            return None
+        return (response.result or {}).get(cleaned)
+
+    async def _build_acceptance_criteria_widget(
+        self, work_item: JiraIssue
+    ) -> ReadOnlyADFMarkdownTextAreaWidget | ReadOnlyPlainTextTextAreaWidget | None:
+        """Builds a read-only widget with the acceptance criteria of the work item, i.e. the field of the setting
+        `acceptance_criteria_field`.
+
+        Args:
+            work_item: the work item.
+
+        Returns:
+            The widget or `None` if the setting is not set, the field does not exist or the field has no value.
+        """
+
+        if not (field_id := await self._get_field_id(self.app.config.acceptance_criteria_field)):  # type:ignore[attr-defined]
+            return None
+        value: Any | None = work_item.get_custom_field_value(field_id)
+        if work_item.rich_text_value_is_empty(value):
+            return None
+        metadata: dict = work_item.get_field_edit_metadata(field_id) or {}
+        return build_read_only_rich_text_widget(
+            jira_field_key=field_id,
+            field_name=metadata.get('name') or self.app.config.acceptance_criteria_field.strip(),  # type:ignore[attr-defined]
+            required=metadata.get('required', False),
+            content=value,
+        )
+
+    async def _setup_work_item_specification_analysis(self, work_item: JiraIssue) -> None:
+        """Sets up the pane that displays the specification analysis of the work item, i.e. the field of the setting
+        `specification_analysis_field`.
+
+        The pane is displayed when the field can be edited or when it has a value. Like the other textarea-based fields,
+        the content of the pane can be viewed, copied and edited.
+
+        Args:
+          work_item: the work item whose specification analysis we want to display.
+
+        Returns:
+          None
+        """
+
+        if not (field_id := await self._get_field_id(self.app.config.specification_analysis_field)):  # type:ignore[attr-defined]
+            return
+        value: Any | None = work_item.get_custom_field_value(field_id)
+        metadata: dict | None = work_item.get_field_edit_metadata(field_id)
+        if metadata is None and work_item.rich_text_value_is_empty(value):
+            return
+        metadata = metadata or {}
+        field_name = 'Specification analysis'
+        widget: (
+            ReadOnlyADFMarkdownTextAreaWidget
+            | ReadOnlyPlainTextTextAreaWidget
+            | EmptyTextAreaStaticWidget
+        )
+        web_links: list[Link] = []
+        if work_item.rich_text_value_is_empty(value):
+            widget = EmptyTextAreaStaticWidget(
+                jira_field_key=metadata.get('key') or field_id,
+                id=field_id,
+                classes='tip',
+                name=metadata.get('name') or field_name,
+            )
+        else:
+            widget = build_read_only_rich_text_widget(
+                jira_field_key=metadata.get('key') or field_id,
+                field_name=metadata.get('name') or field_name,
+                required=metadata.get('required', False),
+                content=value,
+            )
+            web_links = widget.extract_web_links()
+        pane = TextAreaTabPane(title=field_name, widget_id=f'pane-{field_id}')
+        await self.info_tabbed_content.add_pane(pane)
+        if web_links:
+            await pane.mount(WebLinksCollapsible(WebLinksDataTable(web_links)))
+        await pane.mount(widget)
 
     async def _setup_work_item_customers(self, work_item: JiraIssue) -> None:
         """Sets up the pane that displays the information about the customers of the work item.
@@ -374,7 +471,10 @@ class WorkItemInfoContainer(Vertical):
             # set the description
             await self._setup_work_item_description(work_item)
 
-            # set the information about the customers, right after the description
+            # set the specification analysis, right after the description
+            await self._setup_work_item_specification_analysis(work_item)
+
+            # set the information about the customers
             await self._setup_work_item_customers(work_item)
 
             # set the Definition of Ready and the Definition of Done
@@ -386,7 +486,17 @@ class WorkItemInfoContainer(Vertical):
                     ReadOnlyADFMarkdownTextAreaWidget
                     | ReadOnlyPlainTextTextAreaWidget
                     | EmptyTextAreaStaticWidget
-                ] = self._build_textarea_widgets(work_item)
+                ] = self._build_textarea_widgets(
+                    work_item,
+                    excluded_field_ids={
+                        field_id
+                        for field_id in [
+                            await self._get_field_id(self.app.config.acceptance_criteria_field),  # type:ignore[attr-defined]
+                            await self._get_field_id(self.app.config.specification_analysis_field),  # type:ignore[attr-defined]
+                        ]
+                        if field_id
+                    },
+                )
                 for widget in widgets:
                     web_links: list[Link] = []
                     if isinstance(widget, EmptyTextAreaStaticWidget):
@@ -408,6 +518,7 @@ class WorkItemInfoContainer(Vertical):
     def _build_textarea_widgets(
         self,
         work_item: JiraIssue,
+        excluded_field_ids: set[str] | None = None,
     ) -> list[
         ReadOnlyADFMarkdownTextAreaWidget
         | ReadOnlyPlainTextTextAreaWidget
@@ -433,6 +544,8 @@ class WorkItemInfoContainer(Vertical):
 
         Args:
             work_item: the instance of the work item whose text-based widgets we want to set up.
+            excluded_field_ids: the IDs of the fields to ignore because they are displayed elsewhere, e.g. the acceptance
+            criteria.
 
         Returns:
             A list of ReadOnlyADFMarkdownTextAreaWidget, ReadOnlyPlainTextTextAreaWidget or EmptyTextAreaStaticWidget.
@@ -446,7 +559,7 @@ class WorkItemInfoContainer(Vertical):
         if issue_edit_metadata := work_item.get_edit_metadata():
             ignored_fields = self._update_additional_fields_ignore_ids
             for field_id, field in issue_edit_metadata.items():
-                if field_id in ignored_fields:
+                if field_id in ignored_fields or field_id in (excluded_field_ids or set()):
                     continue
 
                 metadata = FieldMetadata(field)

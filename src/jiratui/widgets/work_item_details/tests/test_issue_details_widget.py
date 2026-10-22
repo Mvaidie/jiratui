@@ -2315,3 +2315,45 @@ async def test_show_details_form_when_issue_is_displayed(jira_issue, app: JiraAp
         await app.workers.wait_for_complete()
         # THEN
         assert widget.issue_details_form_container.display is True
+
+
+@pytest.mark.parametrize(
+    'labels, enable_updating_additional_fields, expected_value, expected_display',
+    [
+        (['backend', 'customer'], False, 'backend, customer', True),
+        (None, False, '', True),
+        # the labels are displayed by a dynamic widget that can update them
+        (['backend'], True, 'backend', False),
+    ],
+)
+@patch.object(APIController, 'search_users_assignable_to_issue')
+@patch('jiratui.widgets.screen.MainScreen.fetch_statuses')
+@patch('jiratui.widgets.screen.MainScreen.fetch_issue_types')
+@patch('jiratui.widgets.screen.MainScreen.fetch_projects')
+@pytest.mark.asyncio
+async def test_issue_details_widget_displays_the_labels(
+    search_projects_mock: AsyncMock,
+    fetch_issue_types_mock: AsyncMock,
+    fetch_statuses_mock: AsyncMock,
+    search_users_assignable_to_issue_mock: AsyncMock,
+    labels,
+    enable_updating_additional_fields: bool,
+    expected_value: str,
+    expected_display: bool,
+    jira_issues: list[JiraIssue],
+    app,
+):
+    # GIVEN
+    app.config.enable_updating_additional_fields = enable_updating_additional_fields
+    work_item = jira_issues[1]
+    work_item.labels = labels
+    async with app.run_test() as pilot:
+        main_screen = cast('MainScreen', app.screen)  # type:ignore[name-defined] # noqa: F821
+        details_widget = main_screen.issue_details_widget
+        # WHEN
+        details_widget.issue = work_item
+        await app.workers.wait_for_complete()
+        await pilot.pause()
+        # THEN
+        assert details_widget.issue_labels_field.value == expected_value
+        assert details_widget.issue_labels_field.display is expected_display
