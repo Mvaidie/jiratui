@@ -1547,3 +1547,10 @@ WebLinksDataTable {
     text-style: bold;
     margin-top: 1;
 }
+
+/* Definition of tab */
+
+.work-item-definition-of-label {
+    text-style: bold;
+    margin-top: 1;
+}

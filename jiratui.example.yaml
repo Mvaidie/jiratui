@@ -64,6 +64,8 @@ customer_ticket_link_field: 'Customer ticket link'
 hidden_work_item_statuses:
   - 'Closed'
 hide_work_item_statuses_on_startup: true
+definition_of_ready_field: 'DoR'
+definition_of_done_field: 'DoD'
 git_repositories:
   1:
     name: 'My Cool Project'

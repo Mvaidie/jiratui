@@ -537,6 +537,15 @@ customers (the field of the setting `customer_field`), the ID of the ticket of t
 the setting `customer_ticket_link_field`, `Customer ticket link` by default). The fields are identified by their name
 or by their ID, e.g. `customfield_10069`. This tab is not displayed when none of these settings is set.
 
+### Definition of Ready and Done
+
+The **Info** tab of the selected work item has a **Definition of** tab, after the customers, that displays the
+Definition of Ready (the field of the setting `definition_of_ready_field`, `DoR` by default) and the Definition of Done
+(the field of the setting `definition_of_done_field`, `DoD` by default) as checklists: every option of the field is
+displayed with a checked box (`☑`) or an unchecked box (`☐`), after the number of checked items. The fields, e.g.
+fields with checkboxes, are identified by their name or by their ID, e.g. `customfield_10878`. This tab is not
+displayed when none of these settings is set.
+
 ### Auto-refresh of the Search Results
 
 The search results can be refreshed automatically. When the auto-refresh is enabled, JiraTUI repeats the last search

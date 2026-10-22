@@ -1509,3 +1509,61 @@ async def test_work_item_info_container_without_customer_settings(
             'pane-description'
         ]
         get_field_ids_mock.assert_not_called()
+
+
+@patch.object(APIController, 'get_field_ids')
+@pytest.mark.asyncio
+async def test_work_item_info_container_displays_the_definition_of_ready_and_done(
+    get_field_ids_mock: AsyncMock,
+    jira_issues_with_custom_fields,
+    app,
+):
+    # GIVEN
+    app.config.customer_field = 'Customer'
+    app.config.definition_of_ready_field = 'DoR'
+    app.config.definition_of_done_field = 'DoD'
+    get_field_ids_mock.side_effect = lambda fields: APIControllerResponse(
+        result={
+            'Customer': 'customfield_10085',
+            'DoR': 'customfield_10878',
+            'DoD': 'customfield_10911',
+        }
+    )
+    work_item = jira_issues_with_custom_fields[0]
+    work_item.edit_meta = {
+        'fields': {
+            'description': {'key': 'description', 'name': 'description', 'required': True},
+            'customfield_10878': {
+                'allowedValues': [{'value': 'Estimated'}, {'value': 'Validated'}],
+            },
+            'customfield_10911': {'allowedValues': [{'value': 'Reviewed'}]},
+        }
+    }
+    work_item.custom_fields = {
+        'customfield_10085': ['ATOS'],
+        'customfield_10878': [{'value': 'Validated'}],
+        'customfield_10911': None,
+    }
+    async with app.run_test() as pilot:
+        widget = WorkItemInfoContainer()
+        await app.screen.mount(widget)
+        await app.workers.wait_for_complete()
+        # WHEN
+        widget.issue = work_item
+        await app.workers.wait_for_complete()
+        await pilot.pause()
+        # THEN
+        panes = list(widget.info_tabbed_content.query(TabPane))
+        assert [pane.id for pane in panes] == [
+            'pane-description',
+            'pane-customers',
+            'pane-definition-of',
+        ]
+        texts = [str(static.render()) for static in panes[2].query(Static)]
+        assert texts == [
+            'Definition of Ready (1/2)',
+            '☐ Estimated',
+            '☑ Validated',
+            'Definition of Done (0/1)',
+            '☐ Reviewed',
+        ]

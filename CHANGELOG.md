@@ -33,6 +33,9 @@ the ID of the ticket of the customer and the link to the ticket of the customer;
 - Add the `Hide Closed` filter: a checkbox, checked by default, that hides from the search results the work items in
 the statuses of the setting `hidden_work_item_statuses` (`Closed` by default). A status selected in the status filter
 has precedence. It can be focused with the keys `h` (legacy) or `alt+h` (standard).
+- Add a `Definition of` tab to the `Info` tab of the work items, after the customers. It displays the Definition of
+Ready and the Definition of Done of the work item as checklists, defined by the settings `definition_of_ready_field`
+(`DoR` by default) and `definition_of_done_field` (`DoD` by default).
 
 ### Minor Improvements
 
