@@ -62,6 +62,8 @@ def config_for_testing() -> ApplicationConfiguration:
         customer_ticket_link_field=None,
         hidden_work_item_statuses=None,
         hide_work_item_statuses_on_startup=False,
+        definition_of_ready_field=None,
+        definition_of_done_field=None,
         search_results_auto_refresh_interval=None,
         styling=None,
     )
@@ -104,6 +106,8 @@ def config_for_testing_jira_dc() -> ApplicationConfiguration:
         customer_ticket_link_field=None,
         hidden_work_item_statuses=None,
         hide_work_item_statuses_on_startup=False,
+        definition_of_ready_field=None,
+        definition_of_done_field=None,
         search_results_auto_refresh_interval=None,
         styling=None,
     )
@@ -147,6 +151,8 @@ def jira_api_controller() -> APIController:
         customer_ticket_link_field=None,
         hidden_work_item_statuses=None,
         hide_work_item_statuses_on_startup=False,
+        definition_of_ready_field=None,
+        definition_of_done_field=None,
         search_results_auto_refresh_interval=None,
         styling=None,
     )
@@ -190,6 +196,8 @@ def jira_api_controller_for_jira_dc() -> APIController:
         customer_ticket_link_field=None,
         hidden_work_item_statuses=None,
         hide_work_item_statuses_on_startup=False,
+        definition_of_ready_field=None,
+        definition_of_done_field=None,
         search_results_auto_refresh_interval=None,
         styling=None,
     )
@@ -240,6 +248,8 @@ def app():
         customer_ticket_link_field=None,
         hidden_work_item_statuses=None,
         hide_work_item_statuses_on_startup=False,
+        definition_of_ready_field=None,
+        definition_of_done_field=None,
         search_results_auto_refresh_interval=None,
         show_favourite_filters_in_jql_editor=False,
     )

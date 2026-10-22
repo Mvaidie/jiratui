@@ -37,6 +37,11 @@ from jiratui.widgets.work_item_customers.customers import (
     WorkItemCustomersWidget,
     get_work_item_customers,
 )
+from jiratui.widgets.work_item_definition_of.definition_of import (
+    WorkItemDefinitionOf,
+    WorkItemDefinitionOfWidget,
+    get_work_item_definition_of,
+)
 from jiratui.widgets.work_item_info.screens import DisplayTextContentScreen, EditTextContentScreen
 from jiratui.widgets.work_item_info.tabs import InfoTabbedContent, TextAreaTabPane
 
@@ -296,6 +301,32 @@ class WorkItemInfoContainer(Vertical):
         await pane.mount(widget)
         widget.customers = customers
 
+    async def _setup_work_item_definition_of(self, work_item: JiraIssue) -> None:
+        """Sets up the pane that displays the Definition of Ready and the Definition of Done of the work item.
+
+        The pane is only displayed when at least one of the settings `definition_of_ready_field` and
+        `definition_of_done_field` is set.
+
+        Args:
+          work_item: the work item whose Definition of Ready and Done we want to display.
+
+        Returns:
+          None
+        """
+
+        definition_of: WorkItemDefinitionOf | None = await get_work_item_definition_of(
+            work_item,
+            self.app.api,  # type:ignore[attr-defined]
+            self.app.config,  # type:ignore[attr-defined]
+        )
+        if definition_of is None:
+            return
+        pane = TabPane('Definition of', id='pane-definition-of')
+        await self.info_tabbed_content.add_pane(pane)
+        widget = WorkItemDefinitionOfWidget()
+        await pane.mount(widget)
+        widget.definition_of = definition_of
+
     async def _refresh_tabs_and_set_work_item(self, work_item: JiraIssue | None):
         """Updates the content of the Info tab, i.e. its TextAreaTabPane widgets and the summary widget.
 
@@ -345,6 +376,9 @@ class WorkItemInfoContainer(Vertical):
 
             # set the information about the customers, right after the description
             await self._setup_work_item_customers(work_item)
+
+            # set the Definition of Ready and the Definition of Done
+            await self._setup_work_item_definition_of(work_item)
 
             # build widgets for the fields with rich-text support
             if self._enable_updating_additional_fields:

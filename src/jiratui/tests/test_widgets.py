@@ -45,6 +45,8 @@ def app() -> JiraApp:
         customer_ticket_link_field=None,
         hidden_work_item_statuses=None,
         hide_work_item_statuses_on_startup=False,
+        definition_of_ready_field=None,
+        definition_of_done_field=None,
         search_results_auto_refresh_interval=None,
         styling=None,
     )

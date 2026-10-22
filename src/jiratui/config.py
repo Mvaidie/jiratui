@@ -233,6 +233,12 @@ class ApplicationConfiguration(BaseSettings):
     hide_work_item_statuses_on_startup: bool = True
     """When `True` the checkbox that hides the work items of the statuses of `hidden_work_item_statuses` is checked on
     startup."""
+    definition_of_ready_field: str | None = 'DoR'
+    """The field with the Definition of Ready of the work items, e.g. a field with checkboxes, displayed in the
+    `Definition of` tab of the Info tab. The field is identified by its name or by its ID, e.g. `customfield_10878`."""
+    definition_of_done_field: str | None = 'DoD'
+    """The field with the Definition of Done of the work items, e.g. a field with checkboxes, displayed in the
+    `Definition of` tab of the Info tab. The field is identified by its name or by its ID, e.g. `customfield_10911`."""
     customer_ticket_id_field: str | None = 'Customer ticket ID'
     """The field with the ID of the ticket of the customer, displayed in the Customer tab of the Info tab of the work
     items. The field is identified by its name or by its ID, e.g. `customfield_10087`."""
