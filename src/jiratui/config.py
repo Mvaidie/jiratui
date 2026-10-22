@@ -233,6 +233,12 @@ class ApplicationConfiguration(BaseSettings):
     hide_work_item_statuses_on_startup: bool = True
     """When `True` the checkbox that hides the work items of the statuses of `hidden_work_item_statuses` is checked on
     startup."""
+    acceptance_criteria_field: str | None = 'Acceptance Criterias'
+    """The field with the acceptance criteria of the work items, displayed after the description in the Info tab. The
+    field is identified by its name or by its ID, e.g. `customfield_10845`."""
+    specification_analysis_field: str | None = 'Specification analysis'
+    """The field with the specification analysis of the work items, displayed in the `Specification analysis` tab of
+    the Info tab. The field is identified by its name or by its ID, e.g. `customfield_10812`."""
     definition_of_ready_field: str | None = 'DoR'
     """The field with the Definition of Ready of the work items, e.g. a field with checkboxes, displayed in the
     `Definition of` tab of the Info tab. The field is identified by its name or by its ID, e.g. `customfield_10878`."""

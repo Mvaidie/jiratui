@@ -525,6 +525,22 @@ set the setting to an empty list to disable this feature.
 JiraTUI checks the history of the statuses of the work items of the current page of results: a work item is stale
 when its status did not change during the last days.
 
+### Acceptance Criteria and Specification Analysis
+
+The **Description** tab of the **Info** tab also displays the acceptance criteria of the work item, after its
+description, i.e. the field of the setting `acceptance_criteria_field` (`Acceptance Criterias` by default). They are
+not displayed when the field has no value.
+
+The **Info** tab of the selected work item has a **Specification analysis** tab, right after the description, that
+displays the field of the setting `specification_analysis_field` (`Specification analysis` by default). Like the other
+textarea-based fields, its content can be viewed, copied and edited. The fields are identified by their name or by
+their ID, e.g. `customfield_10812`.
+
+### Labels
+
+The **Details** tab displays the labels of the work item. When the setting `enable_updating_additional_fields` is
+enabled, the labels are displayed with the other additional fields and they can be updated.
+
 ### Work Items with Customers
 
 The search results display a blue dot (`●`) after the type of the work items that have at least one customer, i.e.

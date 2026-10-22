@@ -64,6 +64,8 @@ def config_for_testing() -> ApplicationConfiguration:
         hide_work_item_statuses_on_startup=False,
         definition_of_ready_field=None,
         definition_of_done_field=None,
+        acceptance_criteria_field=None,
+        specification_analysis_field=None,
         search_results_auto_refresh_interval=None,
         styling=None,
     )
@@ -108,6 +110,8 @@ def config_for_testing_jira_dc() -> ApplicationConfiguration:
         hide_work_item_statuses_on_startup=False,
         definition_of_ready_field=None,
         definition_of_done_field=None,
+        acceptance_criteria_field=None,
+        specification_analysis_field=None,
         search_results_auto_refresh_interval=None,
         styling=None,
     )
@@ -153,6 +157,8 @@ def jira_api_controller() -> APIController:
         hide_work_item_statuses_on_startup=False,
         definition_of_ready_field=None,
         definition_of_done_field=None,
+        acceptance_criteria_field=None,
+        specification_analysis_field=None,
         search_results_auto_refresh_interval=None,
         styling=None,
     )
@@ -198,6 +204,8 @@ def jira_api_controller_for_jira_dc() -> APIController:
         hide_work_item_statuses_on_startup=False,
         definition_of_ready_field=None,
         definition_of_done_field=None,
+        acceptance_criteria_field=None,
+        specification_analysis_field=None,
         search_results_auto_refresh_interval=None,
         styling=None,
     )
@@ -250,6 +258,8 @@ def app():
         hide_work_item_statuses_on_startup=False,
         definition_of_ready_field=None,
         definition_of_done_field=None,
+        acceptance_criteria_field=None,
+        specification_analysis_field=None,
         search_results_auto_refresh_interval=None,
         show_favourite_filters_in_jql_editor=False,
     )

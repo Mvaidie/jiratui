@@ -264,6 +264,10 @@ class IssueDetailsWidget(Actionable, Vertical, inherit_bindings=False):  # type:
         return self.query_one(IssueSummaryField)
 
     @property
+    def issue_labels_field(self) -> ReadOnlyTextField:
+        return self.query_one('#issue_labels', expect_type=ReadOnlyTextField)
+
+    @property
     def issue_created_date_field(self) -> ReadOnlyTextField:
         return self.query_one('#issue_created_date', expect_type=ReadOnlyTextField)
 
@@ -392,7 +396,16 @@ class IssueDetailsWidget(Actionable, Vertical, inherit_bindings=False):  # type:
                     valid_empty=True,
                     extra_classes='cols-2',
                 )
-                # set widgets in row 9 - cols 3
+                # set widgets in row 9 - cols 3; the labels can be updated with a dynamic widget when updating
+                # additional fields is enabled
+                yield ReadOnlyTextField(
+                    id='issue_labels',
+                    label='Labels',
+                    disabled=True,
+                    valid_empty=True,
+                    extra_classes='cols-3',
+                )
+                # set widgets in row 10 - cols 3
                 yield HorizontalGroup(id='time-tracking-container', classes='cols-3')
             yield DynamicFieldsWidgets()  # the container for all the widgets created dynamically
 
@@ -557,6 +570,7 @@ class IssueDetailsWidget(Actionable, Vertical, inherit_bindings=False):  # type:
             self.issue_summary_field.clear()
             self.issue_parent_field.clear()
             self.issue_resolution_field.clear()
+            self.issue_labels_field.clear()
             self.issue_resolution_date_field.clear()
             self.issue_last_update_date_field.clear()
             self.issue_key_field.clear()
@@ -978,6 +992,8 @@ class IssueDetailsWidget(Actionable, Vertical, inherit_bindings=False):  # type:
         self.issue_resolution_date_field.value = work_item.resolved_on
         if work_item.resolution:
             self.issue_resolution_field.value = work_item.resolution
+        self.issue_labels_field.value = ', '.join(work_item.labels or [])
+        self.issue_labels_field.display = not self._enable_updating_additional_fields
         self.issue_key_field.value = self._work_item_key or ''
         self.project_id_field.value = f'({work_item.project.key}) {work_item.project.name}'
         self.issue_type_field.value = work_item.work_item_type_name
